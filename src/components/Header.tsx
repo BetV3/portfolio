@@ -82,7 +82,7 @@ export function Header() {
 
         <div className="hidden lg:flex lg:flex-1 lg:justify-end">
           <a
-            href="https://github.com"
+            href="https://github.com/BetV3"
             target="_blank"
             rel="noopener noreferrer"
             className="text-muted-foreground transition-colors hover:text-foreground"
