@@ -1,5 +1,7 @@
+import Link from "next/link";
 import { ProjectCard } from "@/components/ProjectCard";
 import { SkillBadge } from "@/components/SkillBadge";
+import { series, getPostsBySeries, getAllPostsSorted } from "@/data/blog";
 
 const featuredProjects = [
   {
@@ -178,6 +180,130 @@ export default function Home() {
               />
             </svg>
           </a>
+        </div>
+      </section>
+
+      {/* Blog Series Section */}
+      <section className="mx-auto max-w-5xl px-6 py-16 lg:px-8">
+        <div className="flex items-center justify-between mb-10">
+          <div>
+            <h2 className="text-2xl font-bold tracking-tight text-foreground sm:text-3xl">
+              Blog Series
+            </h2>
+            <p className="mt-2 text-muted-foreground">
+              Deep dives into infrastructure, DevOps, and building real systems.
+            </p>
+          </div>
+          <Link
+            href="/blog"
+            className="hidden sm:inline-flex items-center text-sm font-medium text-accent hover:text-accent-muted transition-colors"
+          >
+            View all posts
+            <svg
+              className="ml-1 h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+              />
+            </svg>
+          </Link>
+        </div>
+
+        <div className="grid gap-6 sm:grid-cols-2">
+          {series.slice(0, 4).map((s) => {
+            const seriesPosts = getPostsBySeries(s.id);
+            const colorMap: Record<string, { bg: string; text: string; border: string }> = {
+              blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" },
+              yellow: { bg: "bg-yellow-500/10", text: "text-yellow-400", border: "border-yellow-500/20" },
+              emerald: { bg: "bg-emerald-500/10", text: "text-emerald-400", border: "border-emerald-500/20" },
+              purple: { bg: "bg-purple-500/10", text: "text-purple-400", border: "border-purple-500/20" },
+            };
+            const colors = colorMap[s.color] || colorMap.blue;
+
+            return (
+              <Link
+                key={s.id}
+                href={`/blog#${s.id}`}
+                className={`card-glow group relative rounded-2xl border ${colors.border} ${colors.bg} p-6 transition-all hover:border-opacity-50`}
+              >
+                <div className="flex items-start justify-between mb-3">
+                  <span className={`inline-flex items-center gap-1.5 rounded-full ${colors.bg} px-2.5 py-1 text-xs font-medium ${colors.text}`}>
+                    <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
+                    </svg>
+                    {seriesPosts.length} parts
+                  </span>
+                </div>
+                <h3 className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors mb-2">
+                  {s.title}
+                </h3>
+                <p className="text-sm text-muted-foreground line-clamp-2">
+                  {s.description}
+                </p>
+                <div className="mt-4 flex items-center text-sm text-muted-foreground">
+                  <span>Start reading</span>
+                  <svg className="h-4 w-4 ml-1 group-hover:translate-x-1 transition-transform" fill="none" viewBox="0 0 24 24" strokeWidth="1.5" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" />
+                  </svg>
+                </div>
+              </Link>
+            );
+          })}
+        </div>
+
+        {/* Latest Post Highlight */}
+        {(() => {
+          const latestPosts = getAllPostsSorted().slice(0, 1);
+          if (latestPosts.length === 0) return null;
+          const post = latestPosts[0];
+          return (
+            <div className="mt-8 rounded-2xl border border-border/50 bg-card/30 p-6">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground mb-3">
+                <span className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2 py-0.5 text-accent font-medium">
+                  Latest Post
+                </span>
+                <time dateTime={post.date}>
+                  {new Date(post.date).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}
+                </time>
+              </div>
+              <Link href={`/blog/${post.slug}`} className="group">
+                <h4 className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
+                  {post.title}
+                </h4>
+                <p className="mt-2 text-sm text-muted-foreground line-clamp-2">
+                  {post.description}
+                </p>
+              </Link>
+            </div>
+          );
+        })()}
+
+        <div className="mt-8 sm:hidden">
+          <Link
+            href="/blog"
+            className="inline-flex items-center text-sm font-medium text-accent hover:text-accent-muted transition-colors"
+          >
+            View all posts
+            <svg
+              className="ml-1 h-4 w-4"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="2"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
+              />
+            </svg>
+          </Link>
         </div>
       </section>
 
