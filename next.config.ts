@@ -1,8 +1,10 @@
 import type { NextConfig } from "next";
 
+
+/** @type {import('next').NextConfig} */
 const nextConfig: NextConfig = {
-  output: 'export'
-  /* config options here */
+  output: 'export',
+  trailingSlash: true,
 };
 
 export default nextConfig;

@@ -20,9 +20,9 @@ const technologies = [
 
 const metrics = [
   { label: "Deployment Time", value: "~X min", subtext: "down from Y min" },
-  { label: "AWS Resources", value: "XX+", subtext: "managed via IaC" },
-  { label: "Environments", value: "X", subtext: "dev / staging / prod" },
-  { label: "Regions", value: "X", subtext: "multi-region HA" },
+  { label: "AWS Resources", value: "10+", subtext: "managed via IaC" },
+  { label: "Environments", value: "3", subtext: "dev / staging / prod" },
+  { label: "Regions", value: "2", subtext: "multi-region HA" },
 ];
 
 export default function CloudInfrastructurePage() {

@@ -26,6 +26,9 @@ export const metadata: Metadata = {
     "AWS",
     "Networking",
   ],
+  icons: {
+    icon: "/code-solid-full.svg",
+  },
 };
 
 export default function RootLayout({

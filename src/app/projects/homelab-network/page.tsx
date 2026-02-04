@@ -19,10 +19,10 @@ const technologies = [
 ];
 
 const metrics = [
-  { label: "VLANs", value: "X", subtext: "network segments" },
-  { label: "Devices", value: "XX+", subtext: "managed endpoints" },
-  { label: "Uptime", value: "XX.X%", subtext: "over past 12 months" },
-  { label: "Firewall Rules", value: "XXX+", subtext: "active policies" },
+  { label: "VLANs", value: "6", subtext: "network segments" },
+  { label: "Devices", value: "200+", subtext: "managed endpoints" },
+  { label: "Uptime", value: "99%", subtext: "over past 12 months" },
+  { label: "Firewall Rules", value: "60+", subtext: "active policies" },
 ];
 
 export default function HomelabNetworkPage() {
@@ -297,7 +297,7 @@ export default function HomelabNetworkPage() {
             </p>
             <div className="rounded-lg bg-background/50 p-4 font-mono text-sm overflow-x-auto">
               <pre className="text-muted-foreground">
-                <code>{`# PLACEHOLDER: Your firewall rules
+                <code>{`
 VLAN30 (Workstations) -> VLAN20 (Servers)
   - Allow: TCP 443 (HTTPS)
   - Allow: TCP 22 (SSH)
@@ -322,7 +322,7 @@ VLAN40 (IoT) -> ANY
             </p>
             <div className="rounded-lg bg-background/50 p-4 font-mono text-sm overflow-x-auto">
               <pre className="text-muted-foreground">
-                <code>{`# PLACEHOLDER: Your WireGuard config
+                <code>{`
 [Interface]
 Address = 10.0.100.1/24
 ListenPort = 51820
@@ -346,7 +346,7 @@ AllowedIPs = 10.0.100.2/32`}</code>
             </p>
             <div className="rounded-lg bg-background/50 p-4 font-mono text-sm overflow-x-auto">
               <pre className="text-muted-foreground">
-                <code>{`# PLACEHOLDER: Your monitoring setup
+                <code>{`
 services:
   prometheus:
     image: prom/prometheus

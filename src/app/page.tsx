@@ -72,7 +72,7 @@ export default function Home() {
 
           <div className="mt-10 flex flex-wrap gap-4">
             <a
-              href="/resume"
+              href="/resume/"
               className="inline-flex items-center justify-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
               View Resume
