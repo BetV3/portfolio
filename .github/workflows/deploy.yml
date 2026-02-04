@@ -26,7 +26,7 @@ jobs:
         uses: aws-actions/configure-aws-credentials@v4
         with:
           role-to-assume: ${{ secrets.AWS_ROLE_ARN_GHA_PORTFOLIO_DEPLOY }}
-          aws-region: us-east-1
+          aws-region: us-east-2
 
       - name: Sync to S3
         run: aws s3 sync out/ s3://porfolio-117370072143 --delete
