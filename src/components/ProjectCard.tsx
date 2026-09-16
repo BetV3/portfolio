@@ -9,7 +9,18 @@ interface ProjectCardProps {
   href: string;
   github?: string;
   demo?: string;
+  /** Human-readable status, e.g. "Live in production". */
+  status?: string;
+  /** Drives the status pill colour. */
+  statusTone?: "live" | "complete" | "in-progress" | "design";
 }
+
+const statusTones: Record<string, string> = {
+  live: "bg-emerald-500/10 text-emerald-400",
+  complete: "bg-blue-500/10 text-blue-400",
+  "in-progress": "bg-amber-500/10 text-amber-400",
+  design: "bg-amber-500/10 text-amber-400",
+};
 
 export function ProjectCard({
   title,
@@ -18,11 +29,22 @@ export function ProjectCard({
   href,
   github,
   demo,
+  status,
+  statusTone,
 }: ProjectCardProps) {
   return (
     <article className="card-glow group relative flex flex-col rounded-2xl border border-border/50 bg-card/50 p-6 transition-all hover:border-accent/30 hover:bg-card">
       <div className="flex items-start justify-between gap-4">
         <div className="flex-1">
+          {status && (
+            <span
+              className={`mb-2 inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-medium ${
+                statusTones[statusTone ?? "complete"]
+              }`}
+            >
+              {status}
+            </span>
+          )}
           <h3 className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors">
             <Link href={href} className="before:absolute before:inset-0">
               {title}
@@ -102,7 +124,7 @@ export function ProjectCard({
                 d="M13.5 6H5.25A2.25 2.25 0 003 8.25v10.5A2.25 2.25 0 005.25 21h10.5A2.25 2.25 0 0018 18.75V10.5m-10.5 6L21 3m0 0h-5.25M21 3v5.25"
               />
             </svg>
-            Demo
+            Live site
           </a>
         )}
       </div>

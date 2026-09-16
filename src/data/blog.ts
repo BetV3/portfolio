@@ -11,6 +11,8 @@ export interface BlogPost {
   seriesOrder?: number;
   tags: string[];
   featured?: boolean;
+  /** Only posts with real written content are published; others stay drafts. */
+  published?: boolean;
 }
 
 export interface BlogSeries {
@@ -25,28 +27,28 @@ export const series: BlogSeries[] = [
     id: "kubernetes-production",
     title: "Kubernetes in Production",
     description:
-      "A comprehensive guide to building and operating production-ready Kubernetes clusters, from initial setup to advanced GitOps workflows.",
+      "Planning and operating production Kubernetes: cluster architecture decisions and declarative GitOps delivery with ArgoCD.",
     color: "blue",
   },
   {
     id: "log-aggregation-deep-dive",
     title: "Log Aggregation Deep Dive",
     description:
-      "Building a scalable centralized logging solution with the ELK stack, covering architecture, implementation, and operations.",
+      "Designing a centralized logging architecture with the ELK stack: what to collect, where it lands, and what it costs to keep.",
     color: "yellow",
   },
   {
     id: "devops-best-practices",
     title: "DevOps Best Practices",
     description:
-      "Practical patterns and strategies for CI/CD, infrastructure as code, and building reliable deployment pipelines.",
+      "Patterns I use for CI/CD pipeline design and Terraform at scale.",
     color: "emerald",
   },
   {
     id: "homelab-journey",
     title: "Homelab Journey",
     description:
-      "Documenting the evolution of my homelab - from initial setup to a fully automated, self-hosted infrastructure.",
+      "Why I run a homelab, and how the network is segmented.",
     color: "purple",
   },
 ];
@@ -57,6 +59,7 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "kubernetes-cluster-architecture",
+    published: true,
     title: "Kubernetes Cluster Architecture: Planning for Production",
     description:
       "How to design a Kubernetes cluster that can handle real workloads. Covering node sizing, control plane HA, networking decisions, and capacity planning.",
@@ -70,6 +73,7 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "kubernetes-gitops-argocd",
+    published: true,
     title: "GitOps with ArgoCD: Declarative Kubernetes Deployments",
     description:
       "Implementing GitOps workflows with ArgoCD for automated, auditable, and rollback-friendly deployments to Kubernetes.",
@@ -122,6 +126,7 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "log-aggregation-architecture",
+    published: true,
     title: "Designing a Scalable Log Aggregation Architecture",
     description:
       "Architecture decisions for building a logging system that can handle millions of events per day while remaining queryable and cost-effective.",
@@ -175,6 +180,7 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "terraform-patterns-scale",
+    published: true,
     title: "Infrastructure as Code: Terraform Patterns That Scale",
     description:
       "Organizing Terraform code for real-world projects. Modules, workspaces, state management, and team collaboration patterns.",
@@ -188,6 +194,7 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "cicd-pipeline-design",
+    published: true,
     title: "CI/CD Pipeline Design for Modern Applications",
     description:
       "Building robust CI/CD pipelines with proper testing stages, security scanning, and deployment strategies.",
@@ -228,6 +235,7 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "why-homelab",
+    published: true,
     title: "Why I Built a Homelab (And You Should Too)",
     description:
       "The case for running your own infrastructure at home. Learning opportunities, cost analysis, and getting started.",
@@ -240,6 +248,7 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "network-segmentation-homelab",
+    published: true,
     title: "Network Segmentation in the Homelab",
     description:
       "Implementing VLANs, firewall rules, and zero-trust principles to secure a home network with multiple trust zones.",
@@ -280,6 +289,7 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "api-rate-limiting-go",
+    published: true,
     title: "API Rate Limiting Patterns in Go",
     description:
       "Implementing token bucket, sliding window, and distributed rate limiting in Go with Redis backing.",
@@ -310,6 +320,7 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "postgres-performance-tuning",
+    published: true,
     title: "PostgreSQL Performance Tuning in Production",
     description:
       "Real-world PostgreSQL optimization: query analysis, index strategies, connection pooling, and configuration tuning.",
@@ -321,8 +332,11 @@ export const posts: BlogPost[] = [
 ];
 
 // Helper functions
+/** Posts with finished content. Drafts are excluded everywhere on the site. */
+export const publishedPosts: BlogPost[] = posts.filter((post) => post.published);
+
 export function getPostBySlug(slug: string): BlogPost | undefined {
-  return posts.find((post) => post.slug === slug);
+  return publishedPosts.find((post) => post.slug === slug);
 }
 
 export function getSeriesById(id: string): BlogSeries | undefined {
@@ -330,21 +344,26 @@ export function getSeriesById(id: string): BlogSeries | undefined {
 }
 
 export function getPostsBySeries(seriesId: string): BlogPost[] {
-  return posts
+  return publishedPosts
     .filter((post) => post.series === seriesId)
     .sort((a, b) => (a.seriesOrder ?? 0) - (b.seriesOrder ?? 0));
 }
 
 export function getStandalonePosts(): BlogPost[] {
-  return posts.filter((post) => !post.series);
+  return publishedPosts.filter((post) => !post.series);
 }
 
 export function getFeaturedPosts(): BlogPost[] {
-  return posts.filter((post) => post.featured);
+  return publishedPosts.filter((post) => post.featured);
+}
+
+/** Series that still have at least one published post. */
+export function getActiveSeries(): BlogSeries[] {
+  return series.filter((s) => publishedPosts.some((p) => p.series === s.id));
 }
 
 export function getAllPostsSorted(): BlogPost[] {
-  return [...posts].sort(
+  return [...publishedPosts].sort(
     (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime()
   );
 }
