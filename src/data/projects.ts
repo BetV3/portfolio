@@ -111,6 +111,284 @@ export const projects: Project[] = [
     ],
   },
   {
+    slug: "fleet-watchdog",
+    title: "Fleet Watchdog",
+    tagline:
+      "A ~250-line Python watchdog that runs on a different host from the agent fleet it watches, built after a cron job failed 970 times in four days and alerted exactly once.",
+    category: "Infrastructure / Reliability",
+    status: "live",
+    accent: "amber",
+    order: 2,
+    featured: true,
+    tech: [
+      { name: "Python", category: "Language" },
+      { name: "System cron", category: "Scheduling" },
+      { name: "SSH", category: "Access" },
+      { name: "Discord webhooks", category: "Alerting" },
+      { name: "keepalived (VRRP)", category: "High availability" },
+      { name: "Langfuse", category: "Observability" },
+      { name: "ClickHouse", category: "Datastore" },
+    ],
+    metrics: [
+      {
+        label: "Silent failure streak",
+        value: "970",
+        subtext: "consecutive failed runs over four days, one alert on the first",
+      },
+      {
+        label: "Same bug, different layers",
+        value: "4",
+        subtext: "components in one stack reported success while doing nothing",
+      },
+      {
+        label: "Signals watched",
+        value: "23",
+        subtext: "5 HTTP, 6 SSH, 11 DNS/keepalived, plus every cron job's last run",
+      },
+      {
+        label: "Dead man's threshold",
+        value: "20 min",
+        subtext: "~4 missed runs before the other host reports the watchdog gone",
+      },
+    ],
+    sections: [
+      {
+        heading: "The pattern I kept hitting",
+        body: [
+          "Four separate times in one stack, a component told me it was working while doing nothing at all. A cron job that sat in a clean skipped state while failing. An observability plugin listed as enabled that wrote no data. A DNS health check that passed no matter how broken DNS was. An alert sender that returned without an error and delivered nothing. Different technologies, same bug: the success path and the working path had come apart, and only the success path was visible.",
+          "A component that crashes is the easy case. It leaves a stack trace, it fails a check, someone gets paged. A component that reports success and does nothing produces exactly the same signal as a component that is fine, so the only thing that finds it is a person going to look. In the worst of these, nobody looked for four days.",
+          "After the fourth one I stopped treating them as four incidents and started treating them as one failure class. The monitoring I built assumes that a component's own report of its health is the least trustworthy signal I have.",
+        ],
+      },
+      {
+        heading: "Four ways the same failure showed up",
+        body: [
+          "The cron job jobs-worker was scheduled every five minutes on weekdays. It failed 970 consecutive times over four days. An alert fired on the first failure and then never again, because the job settled into a skipped state and stayed there. The reason nobody heard about failures 2 through 970 is that the alerting lived inside the same agent runtime as the job it was watching. When that runtime stopped doing useful work, it also stopped complaining.",
+          "An observability plugin showed as enabled in the plugin list and was fully configured with credentials. It recorded nothing. The langfuse SDK was not present in the virtualenv, and the plugin failed open: missing import, no error, silent no-op. Working out why the install had not taken, I found that 3 of the 4 virtualenvs had no pip at all, because uv had created them. The install had failed as quietly as the plugin did.",
+          "A keepalived health check ran dig against an internal name, and keepalived reads only the exit code. On the live boxes I measured what dig actually returns: exit 0 on NXDOMAIN, 0 on SERVFAIL, 0 on REFUSED. Only a dead port gave exit 9. So the check could detect that the DNS process was gone and literally nothing else. If the authoritative server died while the resolver stayed up, every internal name would come back NXDOMAIN, the check would still pass, and the virtual IP would stay parked on the broken node.",
+          "The fourth one was in the watchdog itself. It posted alerts to a Discord webhook using Python's urllib. Discord sits behind Cloudflare, which rejects urllib's default User-Agent with error 1010 and an HTTP 403. curl worked, urllib did not. The watchdog ran on schedule, looked healthy, and delivered zero alerts. Setting an explicit User-Agent fixed it. I only caught it because I tested delivery instead of trusting that the send code had run.",
+        ],
+      },
+      {
+        heading: "What I built",
+        body: [
+          "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
+          "It covers 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Alerts go to Discord. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
+          "It caught a real cron drift failure on its first run.",
+        ],
+      },
+      {
+        heading: "Two hosts watching each other",
+        body: [
+          "A watchdog on a separate host is still a single host. If the watchdog host dies, alerting dies with it, and silence looks exactly like health — the same failure shape as the original 970-failure outage, one level up.",
+          "So a second script runs on the original host on a */10 cron and checks one thing: the age of the watchdog's state file on the watchdog host. If that file is older than 20 minutes, roughly four missed runs, it alerts. Host A watches host B, host B watches host A, so whichever one dies, the other one notices. It is the inverse of the watchdog rather than a copy of it, and it is the piece that makes the watchdog's own failure detectable.",
+        ],
+      },
+      {
+        heading: "Proving the alerts actually fire",
+        body: [
+          "Every failure above reported success, so I did not take the watchdog's word for its own behaviour either.",
+          "I injected a deliberately dead check. The alert fired exactly once. The second run stayed silent, so a stuck problem does not turn into repeat spam. Removing the check produced exactly one recovery message. I then backdated the watchdog's state file to exercise the dead man's switch and got the same three results: one alert, silence on the second run, exactly one recovery.",
+          "The observability plugin got the same treatment. I counted rows in ClickHouse before and after a real agent turn, and the count went from 1 to 3. Reading enabled in the plugin list is what fooled me the first time, so the fix does not count until data lands somewhere I can count it.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This watches a personal nine-agent fleet, not a commercial production system. The traffic is mine and the cost of a missed alert is mine. I am listing it because the failure analysis and the design decisions are real, not because it operates at scale.",
+          "One gap is still open, and it is the one that matters most: the job never ran at all, as distinct from the job ran and failed. Everything described here inspects the result of something that executed. Catching a job that quietly stopped being scheduled needs push heartbeat monitors. The Uptime Kuma container is running and has no monitors configured, which is the same shape of problem as a plugin that shows enabled and records nothing.",
+          "There is also no alerting on cost thresholds yet, even though the data is available. I know about it and I have not built it.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "ha-dns",
+    title: "Highly Available DNS Pair",
+    tagline:
+      "Two PowerDNS nodes behind a keepalived VIP. Replication was silently dead, two health checks in a row could not return failure, and only a real failover test caught the second one.",
+    category: "Infrastructure / Networking",
+    status: "live",
+    accent: "sky",
+    order: 3,
+    tech: [
+      { name: "PowerDNS Recursor", category: "Client-facing resolver" },
+      { name: "PowerDNS Authoritative", category: "Internal zones" },
+      { name: "keepalived / VRRP", category: "Failover" },
+      { name: "SQLite", category: "Zone storage" },
+      { name: "systemd-networkd / netplan", category: "Host networking" },
+      { name: "Bash + dig", category: "Health checks" },
+    ],
+    metrics: [
+      {
+        label: "Failover probes",
+        value: "20/20",
+        subtext: "correct answers during an induced failover",
+      },
+      {
+        label: "VIP release",
+        value: "~4 s",
+        subtext: "from check failure to keepalived FAULT",
+      },
+      {
+        label: "VIP moves",
+        value: "13",
+        subtext: "keepalived state transitions in 30 days",
+      },
+      {
+        label: "Broken health checks",
+        value: "2",
+        subtext: "the original, and my own replacement",
+      },
+    ],
+    sections: [
+      {
+        heading: "What it is",
+        body: [
+          "Two DNS servers share a virtual IP through keepalived/VRRP. Clients only ever talk to the virtual address, and whichever node currently holds it answers.",
+          "Each node runs two PowerDNS daemons split by port: a recursor on :53 that clients query and that validates DNSSEC, and an authoritative server on :5300 that is internal only. The recursor forwards the internal zones to the local authoritative server and recurses everything else. PowerDNS 5.0.2 on a sqlite backend.",
+          "I did not design that split and I am not claiming it. It was already in place and it is sound. What I did was check whether the failover wrapped around it actually worked, and it did not.",
+        ],
+      },
+      {
+        heading: "The serials agreed and the data did not",
+        body: [
+          "The main zone was kind NATIVE on the primary and SLAVE on the secondary. NATIVE tells PowerDNS that the underlying database is replicated out of band, so it sends no NOTIFY messages at all. There was no out-of-band replication — no cron job, no timer, no script on either box.",
+          "Someone had added a record without bumping the zone serial. Both nodes advertised the same serial while serving different data, and a secondary only pulls a fresh copy when the primary's serial is higher, so it could never resync. Nothing was failing. It was doing exactly what it was configured to do and staying wrong indefinitely.",
+          "The proof I captured before changing anything: querying the primary for the drifted record returned an address, the same query against the secondary returned empty, and both SOA serials read identically. A zone transfer diff showed exactly one record difference.",
+          "What was already correct matters here. The primary flag, the also-notify target, and the zone transfer ACL were all set properly — the zone KIND was the entire bug. Setting it to MASTER, bumping the serial and forcing a NOTIFY fixed it, and afterwards all four zones verified at matching serials.",
+          "That drift only bites if the virtual IP actually moves, and it does. keepalived logged 13 state transitions in the preceding 30 days, the most recent when the network interface dropped for about three minutes. Every one of those silently changed which answers the network received. Preemption is not disabled, so the primary grabs the IP straight back on recovery — the address flaps between two servers holding different data.",
+        ],
+      },
+      {
+        heading: "Two health checks that could not fail",
+        body: [
+          "keepalived decided whether the node was healthy by running dig against a local name and reading the exit code, which is the only thing keepalived looks at. I measured what dig actually exits with on these boxes: 0 on NXDOMAIN, 0 on SERVFAIL, 0 on REFUSED. Only a dead port produced a non-zero status, 9.",
+          "So the check answered exactly one question — is the recursor process still running. If the authoritative server died while the recursor stayed up, every internal name would return NXDOMAIN, the check would keep passing, and the virtual IP would stay parked on the broken node. A check that cannot return failure for the failure you care about is not a health check, it is a process monitor with a misleading name.",
+          "My replacement was wrong in the same family. It asserted that the output of dig was non-empty. dig writes its communications errors to stdout, not stderr, so the variable was non-empty precisely when the server was down. I had written a check that passed harder as things got worse.",
+          "The version that shipped checks dig's exit status and then validates the shape of the answer: an SOA record has to have seven fields with a numeric serial. The comment I left in the script is the lesson — never trust dig's stdout without also checking its exit status.",
+        ],
+      },
+      {
+        heading: "Breaking it on purpose",
+        body: [
+          "A failover pair is a hypothesis until you break it. I only found the second bad health check because I stopped the authoritative server on the primary and watched what the check returned: 0, with the server verifiably down. Reading the script again would not have shown me that. The green status was the thing that was wrong.",
+          "With the corrected check in place I ran the test again. Stopped the authoritative server on the primary node. The health check returned 1. keepalived entered FAULT state and released the virtual IP in about four seconds, and the secondary took over.",
+          "Running alongside it was a probe loop querying the virtual IP every two seconds for 40 seconds, spanning the failure and the recovery: 20 consecutive probes, zero failed queries, every one returning the correct address.",
+          "That is one test on a small system and I would not call it proof of availability. It is the difference between believing failover works and having watched it work once, under a failure I chose and timed.",
+        ],
+      },
+      {
+        heading: "The outage I caused",
+        body: [
+          "I took the secondary off the network for about two hours and twenty minutes, and it was entirely my own doing. While applying a resolver configuration change I wrote the netplan YAML with mode 600.",
+          "netplan propagates that mode to the file it generates under /run/systemd/network/, and systemd-networkd runs as its own user, not root. It could not read its own generated config. The journal recorded the whole thing in three lines: permission denied opening the generated network file, then reconfiguring with the dracut default, then acquiring a DHCPv4 address. With its real config unreadable the host fell through to the dracut initramfs DHCP catch-all and picked up a random address — while still holding the virtual IP. For a moment both nodes answered for the same address: a genuine split brain, caused by a file permission. DNS service was never interrupted, because the primary held the IP throughout. That is not a mitigation I designed.",
+          "The trap is that netplan warns at mode 644 that permissions are too open, and silently breaks at 600. The warning points the opposite direction from the failure.",
+          "I root-caused it by reading the systemd-networkd journal rather than guessing at it, which is the one part of this I would repeat. Recovery over SSH narrowed the options: netplan apply tears the interface down and is a console-required operation, not something to run on a host you are reaching through that interface. Adding an address with ip addr add is additive and cannot drop the link, so it is safe remotely, and networkctl reload re-reads configuration without touching links. I used those. keepalived needed a restart too — it cannot bind a unicast source address that does not exist, which is why it had been sitting as MASTER holding an address it should not have had.",
+        ],
+      },
+      {
+        heading: "The rest of the hardening",
+        body: [
+          "keepalived was silently refusing to run health-check scripts at all without script security enabled. I caught that by validating the config before reloading rather than after, which is the entire reason that check exists.",
+          "VRRP authentication was added. keepalived truncates the auth password to exactly eight characters, so it has to be exactly eight or the two nodes silently disagree.",
+          "The service unit had Restart=no and now has Restart=always. Reverse DNS records and 18 forward records were added for hosts that previously had no names at all.",
+        ],
+      },
+      {
+        heading: "Honest limitations",
+        body: [
+          "This is a homelab DNS pair serving a personal network, not a commercial production system. What I am claiming is the defects found and the testing that found them, not the scale of the thing.",
+          "One defect is still open, deliberately. Neither nameserver can resolve its own zone through the system resolver — both point at a router that does not know the internal zone. Fixing that is the exact class of change that caused the outage above, so it waits until I can do it with console access instead of over SSH. Deferring it with a stated reason is a better answer than doing it a second time from the wrong end of the network.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "verified-backups",
+    title: "Restore-Tested Backups",
+    tagline:
+      "Nightly restic backups to a host on different physical hardware, proven by an actual restore: 9,849 messages read back out of the restored database.",
+    category: "Infrastructure / Data",
+    status: "live",
+    accent: "violet",
+    order: 4,
+    tech: [
+      { name: "restic", category: "Backup engine" },
+      { name: "PostgreSQL", category: "Dumped databases" },
+      { name: "SQLite", category: "Dumped databases" },
+      { name: "Python", category: "SQLite .backup API" },
+      { name: "cron", category: "Scheduling" },
+    ],
+    metrics: [
+      {
+        label: "Databases with a copy",
+        value: "5",
+        subtext: "three Postgres, two SQLite; it was one",
+      },
+      {
+        label: "Restore test",
+        value: "9,849",
+        subtext: "messages read back out of a restored copy, across 316 sessions",
+      },
+      {
+        label: "Dead man's switch",
+        value: "20 min",
+        subtext: "stale watchdog state before the other host alerts",
+      },
+      {
+        label: "Offsite copies",
+        value: "0",
+        subtext: "everything is in one building",
+      },
+    ],
+    sections: [
+      {
+        heading: "What it does",
+        body: [
+          "Every night at 02:40, restic snapshots the main agent host to a second host and prunes to a retention window of 14 daily, 8 weekly, and 6 monthly snapshots. Before this existed, exactly one database had a backup of any kind. Conversation state, the agent working directories, and the orchestrator database had zero copies.",
+          "Three PostgreSQL databases are dumped fresh on each run. Two SQLite databases, the largest a 64 MB conversation database, are captured through Python's .backup API rather than copied off disk. That distinction matters: copying a live SQLite file while its write-ahead log is active gives you a corrupt snapshot, and you find that out at restore time, which is the worst time to find it out.",
+          "The run also tars up the git vault's bare remote, which is otherwise a single point of failure in its own right, along with agent directories, cron definitions, and config files. Virtualenvs, build caches and logs are excluded, since they rebuild from source and would crowd out things that do not.",
+        ],
+      },
+      {
+        heading: "A backup that has never been restored is a hypothesis",
+        body: [
+          "Most backups are untested. The job runs, the log says success, and nobody has ever tried to bring the data back, so what you actually hold is a belief about your data rather than a copy of it.",
+          "So I restored it. The restore goes to a scratch directory and the script checks four things: restic's repository integrity check returned no errors were found; the restored conversation database opened and answered a query with 9,849 messages across 316 sessions; SQLite's integrity check on that same restored file returned ok; and the restored PostgreSQL dump was confirmed to be a valid archive containing 132 entries.",
+          "The row counts are the part I care about. A restore that produces files is not the same as a restore that produces a working database, and the gap between the two does not show up until you query it.",
+          "This is a script, not something I did once and wrote down. Any change to the backup job can be followed by a re-run, which is the only reason the numbers on this page are worth quoting.",
+        ],
+      },
+      {
+        heading: "Why the copy sits on different physical hardware",
+        body: [
+          "The main agent host, the database host, the task queue, and all four worker VMs run on a single physical host. That is acceptable for a lab, but it means one machine failing takes the entire critical path with it.",
+          "So the backup target was placed on a different physical hypervisor. A backup that dies alongside the thing it was backing up is not a backup, and a second VM on the same box would have looked like redundancy on the diagram while providing none of it.",
+        ],
+      },
+      {
+        heading: "The dead man's switch: each host watches the other",
+        body: [
+          "The monitoring watchdog runs on the backup host and watches the agent host. That arrangement has an obvious hole. If the backup host dies, alerting dies with it and nothing is left to say so, and silence looks exactly like health.",
+          "I know what that costs here. An agent job in this same fleet once failed 970 times in a row over four days. It alerted on the first failure and then went quiet, and the quiet read as fine.",
+          "The fix is a second script that runs on the original host on a */10 cron and checks one thing: the age of the watchdog's state file on the backup host. If that file is older than 20 minutes, roughly four missed runs, it alerts. It is deliberately the inverse of the main monitor. The watchdog on host B watches host A, and this watches the watchdog on host B, so either host going dark is noticed by the other.",
+          "I tested it by backdating the state file. The alert fired, the second run stayed silent instead of repeating itself, and recovery was sent exactly once.",
+        ],
+      },
+      {
+        heading: "What this does not cover",
+        body: [
+          "There is no offsite copy. Both hosts are in the same building, so a fire takes the originals and every snapshot with them. The fix is not complicated, a cloud repository holding the small but critical subset, and I have not done it. Until I do, this protects against a disk or a host failing, not against the building.",
+          "The destination has 26 GB of capacity, and that ceiling, rather than any policy I wrote, is the real constraint on what gets retained.",
+          "The observability stack's own databases are not backed up. That is a deliberate call, since traces are replaceable. Its configuration is not replaceable, and that is covered.",
+          "The repository password lives in a mode-600 file. A restic repository is encrypted, so losing that password means losing the backups outright with no recovery path. That is a real single point of failure, and it is the same property that makes the repository safe to leave sitting on another machine.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "distributed-log-analyzer",
     title: "Distributed Log Analyzer",
     tagline:
@@ -119,7 +397,7 @@ export const projects: Project[] = [
     status: "complete",
     accent: "blue",
     github: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer",
-    order: 2,
+    order: 5,
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -159,7 +437,7 @@ export const projects: Project[] = [
     status: "complete",
     accent: "orange",
     github: "https://github.com/BetV3/apigateway",
-    order: 3,
+    order: 6,
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -200,7 +478,7 @@ export const projects: Project[] = [
     status: "design",
     accent: "cyan",
     github: "https://github.com/BetV3/talos-platform",
-    order: 4,
+    order: 7,
     tech: [
       { name: "Talos Linux", category: "OS" },
       { name: "Kubernetes", category: "Orchestration" },
@@ -240,7 +518,7 @@ export const projects: Project[] = [
     status: "in-progress",
     accent: "purple",
     github: "https://github.com/BetV3/data-pipeline",
-    order: 5,
+    order: 8,
     tech: [
       { name: "Apache Kafka", category: "Streaming" },
       { name: "Python", category: "ETL" },
@@ -274,7 +552,7 @@ export const projects: Project[] = [
     status: "in-progress",
     accent: "amber",
     github: "https://github.com/BetV3/cloud-infrastructure-pipeline",
-    order: 6,
+    order: 9,
     tech: [
       { name: "Terraform", category: "IaC" },
       { name: "AWS", category: "Cloud" },
@@ -299,7 +577,7 @@ export const projects: Project[] = [
     category: "Infrastructure",
     status: "live",
     accent: "pink",
-    order: 7,
+    order: 10,
     tech: [
       { name: "VMware vSphere 8", category: "Hypervisor" },
       { name: "vCenter", category: "Management" },
