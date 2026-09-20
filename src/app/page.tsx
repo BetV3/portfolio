@@ -1,37 +1,9 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/ProjectCard";
 import { SkillBadge } from "@/components/SkillBadge";
-import { series, getPostsBySeries, getAllPostsSorted } from "@/data/blog";
+import { getActiveSeries, getPostsBySeries, getAllPostsSorted } from "@/data/blog";
+import { getFeaturedProjects, statusLabel } from "@/data/projects";
 
-const featuredProjects = [
-  {
-    title: "Cloud Infrastructure Pipeline",
-    description:
-      "Automated infrastructure provisioning with Terraform, featuring multi-region deployment, auto-scaling, and comprehensive monitoring.",
-    tags: ["Terraform", "AWS", "CI/CD", "Python"],
-    href: "/projects/cloud-infrastructure",
-    github: "https://github.com",
-    demo: undefined,
-  },
-  {
-    title: "Data Pipeline Platform",
-    description:
-      "High-throughput data processing system handling 1M+ events/day with real-time analytics and fault-tolerant architecture.",
-    tags: ["Apache Kafka", "Spark", "PostgreSQL", "Docker"],
-    href: "/projects/data-pipeline",
-    github: "https://github.com",
-    demo: "https://demo.example.com",
-  },
-  {
-    title: "Homelab Network Architecture",
-    description:
-      "Enterprise-grade network segmentation with VLANs, firewall rules, VPN access, and comprehensive monitoring using Grafana.",
-    tags: ["Networking", "pfSense", "Grafana", "Docker"],
-    href: "/projects/homelab-network",
-    github: "https://github.com",
-    demo: undefined,
-  },
-];
 
 const skills = [
   { name: "CI/CD", icon: null },
@@ -65,9 +37,9 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            Building real systems with strong infrastructure and networking depth.
-            From homelab experiments to production AWS deployments, I ship reliable,
-            scalable solutions.
+            I build and operate backend systems end to end — a monitoring SaaS
+            live in production, a Go gateway and a distributed log analyzer, all
+            running on a seven-host vSphere cluster I administer myself.
           </p>
 
           <div className="mt-10 flex flex-wrap gap-4">
@@ -155,8 +127,18 @@ export default function Home() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
-          {featuredProjects.map((project) => (
-            <ProjectCard key={project.title} {...project} />
+          {getFeaturedProjects().map((project) => (
+            <ProjectCard
+              key={project.slug}
+              title={project.title}
+              description={project.tagline}
+              tags={project.tech.slice(0, 4).map((t) => t.name)}
+              href={`/projects/${project.slug}`}
+              github={project.github}
+              demo={project.demo}
+              status={statusLabel[project.status]}
+              statusTone={project.status}
+            />
           ))}
         </div>
 
@@ -216,7 +198,7 @@ export default function Home() {
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2">
-          {series.slice(0, 4).map((s) => {
+          {getActiveSeries().slice(0, 4).map((s) => {
             const seriesPosts = getPostsBySeries(s.id);
             const colorMap: Record<string, { bg: string; text: string; border: string }> = {
               blue: { bg: "bg-blue-500/10", text: "text-blue-400", border: "border-blue-500/20" },
@@ -237,7 +219,7 @@ export default function Home() {
                     <svg className="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" strokeWidth="2" stroke="currentColor">
                       <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" />
                     </svg>
-                    {seriesPosts.length} parts
+                    {seriesPosts.length} part{seriesPosts.length === 1 ? "" : "s"}
                   </span>
                 </div>
                 <h3 className="text-lg font-semibold text-foreground group-hover:text-accent transition-colors mb-2">
@@ -316,20 +298,22 @@ export default function Home() {
             </h2>
             <div className="mt-6 space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                I&apos;m a backend and platform engineer with a passion for building
-                robust, scalable systems. My experience spans from designing data
-                pipelines to architecting cloud infrastructure on AWS.
+                I&apos;m a backend and platform engineer. CS graduate from UT Dallas,
+                most useful in Go and Python, and happiest somewhere near the line
+                between an application and the infrastructure it runs on.
               </p>
               <p>
-                Beyond production systems, I maintain an extensive homelab where I
-                experiment with networking, containerization, and observability tools.
-                This hands-on approach keeps my skills sharp and gives me deep insight
-                into how systems behave under various conditions.
+                Most of what I know came from running things rather than reading
+                about them. I operate a seven-host vSphere cluster at home, and the
+                projects on this site are deployed on it or on a VPS I pay for —
+                which means I am also the one who gets paged when they break.
               </p>
               <p>
-                I believe in building with intention: every system should be
-                observable, maintainable, and documented. I write about my process
-                and share learnings from both successes and failures.
+                I try to keep the claims on this site matched to what the code
+                actually does. Where a project is unfinished, its page says so;
+                where there is a number, it was measured. The write-ups include
+                the incidents too — the abuse of a signup endpoint on CheckPulse
+                taught me more than any of the features did.
               </p>
             </div>
           </div>
@@ -342,15 +326,15 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Backend or Platform Engineering roles
+                  Entry-level backend, platform, or infrastructure roles
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Data Engineering opportunities
+                  Remote, or on-site anywhere in the US
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  DevOps / Infrastructure positions
+                  Teams where I would be close to production
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
@@ -366,15 +350,15 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Expanding homelab with Kubernetes cluster
+                  Bringing up three Talos Kubernetes clusters on vSphere
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Building observability stack with Prometheus & Grafana
+                  Hardening CheckPulse and getting it in front of agencies
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Writing technical blog posts on infrastructure
+                  Load-testing the Go gateway so its numbers can go on the page
                 </li>
               </ul>
             </div>

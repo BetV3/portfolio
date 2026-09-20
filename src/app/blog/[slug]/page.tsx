@@ -5,7 +5,7 @@ import {
   getPostBySlug,
   getSeriesById,
   getPostsBySeries,
-  posts,
+  publishedPosts,
 } from "@/data/blog";
 import { blogContent } from "@/data/blog-content";
 
@@ -14,7 +14,7 @@ type Props = {
 };
 
 export async function generateStaticParams() {
-  return posts.map((post) => ({
+  return publishedPosts.map((post) => ({
     slug: post.slug,
   }));
 }
@@ -43,7 +43,7 @@ export default async function BlogPostPage({ params }: Props) {
     notFound();
   }
 
-  const content = blogContent[slug];
+  const content = blogContent[slug] ?? [];
   const series = post.series ? getSeriesById(post.series) : null;
   const seriesPosts = post.series ? getPostsBySeries(post.series) : [];
 
@@ -203,11 +203,7 @@ export default async function BlogPostPage({ params }: Props) {
 
       {/* Content */}
       <div className="prose prose-invert max-w-none">
-        {content ? (
-          <BlogContent content={content} colors={colors} />
-        ) : (
-          <PlaceholderContent post={post} colors={colors} />
-        )}
+        <BlogContent content={content} colors={colors} />
       </div>
 
       {/* Series Navigation */}
@@ -400,89 +396,3 @@ function BlogContent({
   );
 }
 
-function PlaceholderContent({
-  post,
-  colors,
-}: {
-  post: { title: string; description: string; tags: string[] };
-  colors: { bg: string; text: string; border: string };
-}) {
-  return (
-    <>
-      <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
-        Overview
-      </h2>
-      <p className="text-muted-foreground leading-relaxed mb-4">
-        {post.description}
-      </p>
-      <p className="text-muted-foreground leading-relaxed mb-4">
-        This post is coming soon. I&apos;m currently writing detailed content
-        covering the implementation, challenges faced, and lessons learned.
-        Check back soon for the full write-up.
-      </p>
-
-      <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
-        What This Post Will Cover
-      </h2>
-      <ul className="space-y-2 mb-6">
-        <li className="flex items-start gap-3">
-          <span className={`${colors.text} mt-1.5`}>*</span>
-          <span className="text-muted-foreground">
-            Architecture decisions and trade-offs
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <span className={`${colors.text} mt-1.5`}>*</span>
-          <span className="text-muted-foreground">
-            Step-by-step implementation guide
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <span className={`${colors.text} mt-1.5`}>*</span>
-          <span className="text-muted-foreground">
-            Code examples and configuration snippets
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <span className={`${colors.text} mt-1.5`}>*</span>
-          <span className="text-muted-foreground">
-            Challenges encountered and how I solved them
-          </span>
-        </li>
-        <li className="flex items-start gap-3">
-          <span className={`${colors.text} mt-1.5`}>*</span>
-          <span className="text-muted-foreground">
-            Performance considerations and optimizations
-          </span>
-        </li>
-      </ul>
-
-      <h2 className="text-2xl font-bold text-foreground mt-12 mb-4">
-        Technologies Covered
-      </h2>
-      <div className="flex flex-wrap gap-2 mb-6">
-        {post.tags.map((tag) => (
-          <span
-            key={tag}
-            className={`inline-flex items-center rounded-full ${colors.bg} px-3 py-1.5 text-sm font-medium ${colors.text}`}
-          >
-            {tag}
-          </span>
-        ))}
-      </div>
-
-      <div
-        className={`rounded-xl border ${colors.border} ${colors.bg} p-6 my-8`}
-      >
-        <p className={`text-sm ${colors.text} font-medium mb-2`}>
-          Content in progress
-        </p>
-        <p className="text-sm text-muted-foreground">
-          This article is actively being written. The full content will include
-          detailed explanations, code examples, and practical insights from
-          real-world implementation.
-        </p>
-      </div>
-    </>
-  );
-}

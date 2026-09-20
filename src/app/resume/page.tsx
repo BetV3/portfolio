@@ -38,20 +38,159 @@ export default function ResumePage() {
           Summary
         </h2>
         <p className="text-muted-foreground leading-relaxed">
-          Backend and Platform Engineer with experience in infrastructure
-          automation, data pipelines, and system design. Strong focus on
-          building observable, maintainable systems. Hands on experience with
-          AWS, Kubernetes, and modern DevOps practices through both production
-          work and extensive homelab experimentation.
+          Backend and platform engineer, CS graduate from UT Dallas (2025).
+          I build services in Go and Python and run them myself: a monitoring
+          SaaS deployed in production on a VPS, and a seven-host vSphere
+          cluster at home that hosts the rest. Comfortable owning a system from
+          the request path down to the hypervisor it lands on.
         </p>
+      </section>
+
+      {/* Engineering Projects */}
+      <section className="mb-12">
+        <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
+          <span className="h-1.5 w-1.5 rounded-full bg-accent" />
+          Engineering Projects
+        </h2>
+        <div className="space-y-8">
+          <div className="rounded-xl border border-border/50 bg-card/30 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  CheckPulse - Monitoring SaaS
+                </h3>
+                <p className="text-accent">
+                  Solo build, deployed at checkpulse.dev
+                </p>
+              </div>
+              <p className="text-sm text-muted-foreground">2026</p>
+            </div>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Built and deployed a multi-tenant uptime, DNS, and SSL
+                monitoring service in FastAPI, PostgreSQL, Redis, and Celery;
+                seven containers on a single 1.9 GB VPS behind a Cloudflare
+                tunnel with no inbound ports exposed.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Designed multi-region check consensus requiring two of three
+                regions to agree before declaring an outage, trading small
+                detection latency for a large reduction in false alerts.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Detected and shut down abuse of the signup endpoint as a
+                third-party email-validation oracle (~1,191 bot accounts over
+                three months); added a CAPTCHA gate on all mail-triggering
+                endpoints and split transactional from outbound sending
+                domains to protect sender reputation.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Integrated Stripe billing across three subscription tiers.
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-border/50 bg-card/30 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Distributed Log Analyzer
+                </h3>
+                <p className="text-accent">Go, gRPC</p>
+              </div>
+              <p className="text-sm text-muted-foreground">2025</p>
+            </div>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Built a master-worker system in Go that parses a 3.3 GB,
+                10M-line access log by distributing byte ranges to workers over
+                gRPC and merging their results.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Cut runtime from 36 seconds on a single worker to 6 seconds
+                across 8-11 workers, and used profiling to identify the point
+                where I/O and coordination overhead end the near-linear
+                scaling.
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-border/50 bg-card/30 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  API Gateway
+                </h3>
+                <p className="text-accent">Go, Redis</p>
+              </div>
+              <p className="text-sm text-muted-foreground">2026</p>
+            </div>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Wrote an API gateway from scratch in Go with an explicit
+                middleware chain: request IDs, structured logging, JWT
+                authentication with role-based access control, and round-robin
+                load balancing across backends.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Implemented two-layer rate limiting, in-memory for the common
+                path and Redis-backed for limits shared across replicas, and
+                exposed Prometheus metrics for request rate and latency.
+              </li>
+            </ul>
+          </div>
+
+          <div className="rounded-xl border border-border/50 bg-card/30 p-6">
+            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-foreground">
+                  Homelab Infrastructure
+                </h3>
+                <p className="text-accent">VMware vSphere 8, Linux</p>
+              </div>
+              <p className="text-sm text-muted-foreground">Ongoing</p>
+            </div>
+            <ul className="space-y-2 text-muted-foreground">
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Administer a seven-host ESXi cluster under vCenter 8 (132
+                cores, ~607 GB RAM, 32 VMs), operated through the vCenter API
+                rather than the web client.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Applied least privilege to automation: a dedicated service
+                account on a custom role whose mutating permissions are scoped
+                to a single VM folder.
+              </li>
+              <li className="flex items-start gap-3">
+                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
+                Designing three Talos Kubernetes clusters with a frozen IP
+                plan, host placement map, failure-test catalogue, and secrets
+                policy written before any VM is provisioned.
+              </li>
+            </ul>
+          </div>
+        </div>
       </section>
 
       {/* Experience */}
       <section className="mb-12">
         <h2 className="text-xl font-semibold text-foreground mb-6 flex items-center gap-2">
           <span className="h-1.5 w-1.5 rounded-full bg-accent" />
-          Experience
+          Work Experience
         </h2>
+        <p className="mb-6 text-sm text-muted-foreground">
+          Employment while completing my degree.
+        </p>
         <div className="space-y-8">
           <div className="rounded-xl border border-border/50 bg-card/30 p-6">
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
@@ -82,34 +221,6 @@ productivity goals.
             </ul>
           </div>
 
-{/*           <div className="rounded-xl border border-border/50 bg-card/30 p-6">
-            <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">
-                  Backend Engineer
-                </h3>
-                <p className="text-accent">Previous Company</p>
-              </div>
-              <p className="text-sm text-muted-foreground">2021 - 2023</p>
-            </div>
-            <ul className="space-y-2 text-muted-foreground">
-              <li className="flex items-start gap-3">
-                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Developed high-throughput data pipeline processing 1M+
-                events/day
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Implemented API services with comprehensive testing and
-                documentation
-              </li>
-              <li className="flex items-start gap-3">
-                <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Collaborated on database optimization improving query
-                performance 3x
-              </li>
-            </ul>
-          </div> */}
         </div>
       </section>
 
@@ -123,7 +234,7 @@ productivity goals.
           <div className="rounded-xl border border-border/50 bg-card/30 p-6">
             <h3 className="font-medium text-foreground mb-3">Infrastructure</h3>
             <div className="flex flex-wrap gap-2">
-              {["AWS", "Terraform", "Kubernetes", "Docker", "Linux"].map(
+              {["Linux", "Docker", "Terraform", "VMware vSphere", "Cloudflare", "AWS"].map(
                 (skill) => (
                   <span
                     key={skill}
@@ -139,7 +250,7 @@ productivity goals.
           <div className="rounded-xl border border-border/50 bg-card/30 p-6">
             <h3 className="font-medium text-foreground mb-3">Backend</h3>
             <div className="flex flex-wrap gap-2">
-              {["Python", "Go", "PostgreSQL", "Redis", "Kafka"].map((skill) => (
+              {["Go", "Python", "PostgreSQL", "Redis", "FastAPI", "gRPC"].map((skill) => (
                 <span
                   key={skill}
                   className="inline-flex items-center rounded-full bg-accent/10 px-2.5 py-0.5 text-xs font-medium text-accent"
@@ -153,7 +264,7 @@ productivity goals.
           <div className="rounded-xl border border-border/50 bg-card/30 p-6">
             <h3 className="font-medium text-foreground mb-3">Observability</h3>
             <div className="flex flex-wrap gap-2">
-              {["Prometheus", "Grafana", "ELK Stack", "Datadog"].map(
+              {["Prometheus", "Grafana", "Structured logging"].map(
                 (skill) => (
                   <span
                     key={skill}
@@ -198,7 +309,7 @@ productivity goals.
               </h3>
               <p className="text-muted-foreground">University of Texas at Dallas</p>
             </div>
-            <p className="text-sm text-muted-foreground">2020 - 2025</p>
+            <p className="text-sm text-muted-foreground">Graduated Aug 2025</p>
           </div>
         </div>
       </section>

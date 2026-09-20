@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import {
-  series,
+  getActiveSeries,
   getPostsBySeries,
   getStandalonePosts,
   getAllPostsSorted,
@@ -88,7 +88,7 @@ export default function BlogPage() {
           Series
         </h2>
         <div className="grid gap-6 sm:grid-cols-2">
-          {series.map((s) => (
+          {getActiveSeries().map((s) => (
             <SeriesCard key={s.id} series={s} />
           ))}
         </div>
@@ -120,7 +120,7 @@ export default function BlogPage() {
       </section>
 
       {/* All Posts by Series */}
-      {series.map((s) => {
+      {getActiveSeries().map((s) => {
         const seriesPosts = getPostsBySeries(s.id);
         return (
           <section key={s.id} className="mb-12" id={s.id}>
@@ -132,7 +132,7 @@ export default function BlogPage() {
                 {s.title}
               </h2>
               <span className="text-sm text-muted-foreground">
-                {seriesPosts.length} posts
+                {seriesPosts.length} post{seriesPosts.length === 1 ? "" : "s"}
               </span>
             </div>
             <div className="space-y-4 ml-6 border-l border-border/50 pl-6">
@@ -179,11 +179,11 @@ export default function BlogPage() {
       {/* CTA */}
       <div className="mt-12 text-center rounded-xl border border-border/50 bg-card/30 p-8">
         <h3 className="text-lg font-semibold text-foreground mb-2">
-          More content coming soon
+          Written as I build
         </h3>
         <p className="text-muted-foreground mb-4">
-          Building in public means sharing the process. Follow along as I
-          continue documenting my infrastructure and development journey.
+          Every post here is a finished write-up of something I actually ran.
+          New posts go up when the work behind them is done, not before.
         </p>
         <div className="flex flex-wrap justify-center gap-4">
           <Link
@@ -232,7 +232,7 @@ function SeriesCard({ series: s }: { series: BlogSeries }) {
               d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z"
             />
           </svg>
-          {seriesPosts.length} parts
+          {seriesPosts.length} part{seriesPosts.length === 1 ? "" : "s"}
         </span>
       </div>
 
