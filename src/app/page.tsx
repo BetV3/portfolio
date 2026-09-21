@@ -37,7 +37,7 @@ export default function Home() {
           </h1>
 
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            I build and operate backend systems end to end — a monitoring SaaS
+            I build and operate backend systems end to end: a monitoring SaaS
             live in production, a Go gateway and a distributed log analyzer, all
             running on a seven-host vSphere cluster I administer myself.
           </p>
@@ -305,14 +305,14 @@ export default function Home() {
               <p>
                 Most of what I know came from running things rather than reading
                 about them. I operate a seven-host vSphere cluster at home, and the
-                projects on this site are deployed on it or on a VPS I pay for —
+                projects on this site are deployed on it or on a VPS I pay for.
                 which means I am also the one who gets paged when they break.
               </p>
               <p>
                 I try to keep the claims on this site matched to what the code
                 actually does. Where a project is unfinished, its page says so;
                 where there is a number, it was measured. The write-ups include
-                the incidents too — the abuse of a signup endpoint on CheckPulse
+                the incidents too, including the abuse of a signup endpoint on CheckPulse
                 taught me more than any of the features did.
               </p>
             </div>

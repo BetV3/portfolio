@@ -72,6 +72,84 @@ jobs:
           fi
           echo "No placeholder content found."
 
+      # ---- repo-specific check 1c: no em dashes ---------------------------
+      # Em dashes are a well-known tell for LLM-generated prose. This site is
+      # a job-hunt asset and the copy needs to read as written by a person.
+      # Blocked at CI because re-introducing one is a single keystroke and
+      # nobody proofreads a diff for punctuation.
+      - name: No em dashes
+        run: |
+          set -uo pipefail
+          if grep -rInP '\x{2014}' \
+               --include='*.ts' --include='*.tsx' --include='*.md' \
+               --include='*.mdx' --include='*.json' \
+               src content 2>/dev/null; then
+            echo
+            echo "::error::Em dash (U+2014) found above. Use a comma, colon, period, or parentheses."
+            exit 1
+          fi
+          echo "No em dashes found."
+
+      # ---- repo-specific check 1d: every outbound link must resolve -------
+      # A 404 on a project's repo link is worse than no link: it reads as a
+      # fabricated reference on a page whose entire argument is "these
+      # numbers are real, go check". GitHub rate-limits anonymous HTML, so
+      # 429 is retried with backoff and never treated as dead.
+      - name: Outbound links resolve
+        run: |
+          set -uo pipefail
+          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
+          grep -ohE '(github|demo): "https?://[^"]+"' src/data/projects.ts \
+            | sed -E 's/.*"(https?:[^"]+)"/\1/' | sort -u > /tmp/urls.txt
+          echo "checking $(wc -l < /tmp/urls.txt) urls"
+          FAIL=0
+          while read -r u; do
+            [ -z "$u" ] && continue
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+                       --max-time 20 -L "$u" || echo 000)
+              case "$code" in
+                200) break ;;
+                429) sleep $((attempt * 10)) ;;
+                *)   sleep 3 ;;
+              esac
+            done
+            if [ "$code" = 200 ]; then
+              echo "  ok   $u"
+            else
+              echo "  DEAD $code $u"; FAIL=1
+            fi
+          done < /tmp/urls.txt
+          [ $FAIL -eq 0 ] || { echo "::error::A project link does not resolve."; exit 1; }
+      # ---- repo-specific check 1b: no KNOWN-STALE figures ----------------
+      # The placeholder sweep above catches obvious template filler, but it
+      # cannot catch a number that is merely OUT OF DATE -- "32 VMs" looks
+      # exactly like a real measurement. That is how the homelab metric was
+      # fixed in the metrics array while two copies survived in prose (one
+      # of them on the resume) and shipped to production.
+      #
+      # This is a denylist of superseded values, not a live check. When a
+      # figure is updated, add the old value here so it cannot come back.
+      - name: No superseded figures
+        run: |
+          set -uo pipefail
+          # each entry: 'regex|why'
+          STALE=(
+            '\b32 VMs\b|superseded: vCenter reports 46 powered on of 53'
+            '~?607 GB|superseded: 608 GB total, 257 GB in use'
+          )
+          RC=0
+          for entry in "${STALE[@]}"; do
+            pat="${entry%%|*}"; why="${entry##*|}"
+            if grep -rInE "$pat" --include='*.ts' --include='*.tsx' \
+                 --include='*.md' --include='*.mdx' src content 2>/dev/null; then
+              echo "::error::Stale figure matching /$pat/ -- $why"
+              RC=1
+            fi
+          done
+          [ "$RC" = 0 ] && echo "No superseded figures found."
+          exit $RC
+
       # ---- repo-specific check 2: pages must RENDER, not merely build ----
       # A Next.js static export happily emits a page whose body is empty.
       # `next build` passing proves the bundle compiled, not that a visitor
