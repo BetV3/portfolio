@@ -595,7 +595,7 @@ export const projects: Project[] = [
       {
         heading: "What it is",
         body: [
-          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and roughly 607 GB of RAM, currently running 32 VMs. These figures were read from the vCenter API when this page was written, not estimated.",
+          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 608 GB of RAM, of which 257 GB is actually in use. It currently runs 46 powered-on VMs out of 53 defined. These figures were read from the vCenter API, not estimated.",
           "It is the substrate for the Talos platform, the data pipeline, and the build and automation hosts behind my other projects.",
         ],
       },
