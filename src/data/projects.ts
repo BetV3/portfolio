@@ -16,6 +16,10 @@ export interface ProjectMetric {
 export interface ProjectSection {
   heading: string;
   body: string[];
+  /** Optional diagram rendered after the prose. Path is relative to /public. */
+  image?: string;
+  imageAlt?: string;
+  imageCaption?: string;
 }
 
 export interface Project {
@@ -622,6 +626,18 @@ export const projects: Project[] = [
           "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 7 percent CPU with 42 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
           "The scripts that produced those measurements are in the linked repository, so the claim is checkable rather than asserted.",
         ],
+      },
+      {
+        heading: "The whole estate, drawn from the live APIs",
+        body: [
+          "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
+          "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
+        ],
+        image: "/infrastructure-map.664f1a94.svg",
+        imageAlt:
+          "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
+        imageCaption:
+          "Generated from vCenter, the Kubernetes APIs, VictoriaMetrics, and the watchdog inventory. Addresses replaced with role names.",
       },
     ],
   },
