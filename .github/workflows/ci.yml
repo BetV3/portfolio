@@ -72,6 +72,24 @@ jobs:
           fi
           echo "No placeholder content found."
 
+      # ---- repo-specific check 1c: no em dashes ---------------------------
+      # Em dashes are a well-known tell for LLM-generated prose. This site is
+      # a job-hunt asset and the copy needs to read as written by a person.
+      # Blocked at CI because re-introducing one is a single keystroke and
+      # nobody proofreads a diff for punctuation.
+      - name: No em dashes
+        run: |
+          set -uo pipefail
+          if grep -rInP '\x{2014}' \
+               --include='*.ts' --include='*.tsx' --include='*.md' \
+               --include='*.mdx' --include='*.json' \
+               src content 2>/dev/null; then
+            echo
+            echo "::error::Em dash (U+2014) found above. Use a comma, colon, period, or parentheses."
+            exit 1
+          fi
+          echo "No em dashes found."
+
       # ---- repo-specific check 2: pages must RENDER, not merely build ----
       # A Next.js static export happily emits a page whose body is empty.
       # `next build` passing proves the bundle compiled, not that a visitor

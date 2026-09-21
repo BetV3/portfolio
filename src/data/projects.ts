@@ -81,7 +81,7 @@ export const projects: Project[] = [
       {
         heading: "The design decision I care about: consensus before alerting",
         body: [
-          "Single-probe monitors cry wolf. A blip between one probe and one target produces a 3am page for an outage that never happened, and after enough false alarms people stop reading the alerts — which is worse than having no monitoring at all.",
+          "Single-probe monitors cry wolf. A blip between one probe and one target produces a 3am page for an outage that never happened, and after enough false alarms people stop reading the alerts, which is worse than having no monitoring at all.",
           "CheckPulse runs probes from three regions and only transitions a monitor to DOWN when at least two regions independently agree. That trades a small amount of detection latency for alerts that are worth waking up for. The check workers are Celery tasks; region agreement is resolved in the incident detector rather than in the probe, so adding a fourth region is a config change rather than a rewrite.",
         ],
       },
@@ -89,16 +89,16 @@ export const projects: Project[] = [
         heading: "Running seven containers in 1.9 GB",
         body: [
           "The whole stack lives on one small VPS: API, worker pool, beat scheduler, Postgres, Redis, the tunnel connector, and the dashboard. Memory is the binding constraint, not CPU.",
-          "That constraint drove real choices — Postgres tuned down from its defaults, worker concurrency capped so Celery prefetch cannot balloon resident memory, and no per-service observability sidecars. It is a useful exercise in sizing a system for the box you actually have instead of the box you would like to have.",
+          "That constraint drove real choices: Postgres tuned down from its defaults, worker concurrency capped so Celery prefetch cannot balloon resident memory, and no per-service observability sidecars. It is a useful exercise in sizing a system for the box you actually have instead of the box you would like to have.",
         ],
       },
       {
         heading: "Incident: the signup form became someone else's email validator",
         body: [
           "Between April and July 2026, roughly 1,191 accounts were created by a bot walking an alphabetical list of corporate email addresses. It was not trying to use the product. It was using my verification email as an oracle: submit an address, see whether the mail bounces, learn whether the mailbox is real.",
-          "The damage was not CPU or storage, it was sender reputation — three months of unsolicited verification mail went out from the transactional domain, with my DKIM signature on it.",
+          "The damage was not CPU or storage, it was sender reputation. Three months of unsolicited verification mail went out from the transactional domain, with my DKIM signature on it.",
           "The fix was a Cloudflare Turnstile gate on every endpoint that can trigger an outbound email, and a split between the transactional sending domain and any other mail. The fake accounts are quarantined rather than deleted so the abuse pattern stays auditable.",
-          "The general lesson: any unauthenticated endpoint that sends mail to an attacker-supplied address is an email validation service you are operating for free, and you will not notice from your own dashboards — the traffic looks like growth.",
+          "The general lesson: any unauthenticated endpoint that sends mail to an attacker-supplied address is an email validation service you are operating for free, and you will not notice from your own dashboards, because the traffic looks like growth.",
         ],
       },
       {
@@ -181,7 +181,7 @@ export const projects: Project[] = [
       {
         heading: "Two hosts watching each other",
         body: [
-          "A watchdog on a separate host is still a single host. If the watchdog host dies, alerting dies with it, and silence looks exactly like health — the same failure shape as the original 970-failure outage, one level up.",
+          "A watchdog on a separate host is still a single host. If the watchdog host dies, alerting dies with it, and silence looks exactly like health: the same failure shape as the original 970-failure outage, one level up.",
           "So a second script runs on the original host on a */10 cron and checks one thing: the age of the watchdog's state file on the watchdog host. If that file is older than 20 minutes, roughly four missed runs, it alerts. Host A watches host B, host B watches host A, so whichever one dies, the other one notices. It is the inverse of the watchdog rather than a copy of it, and it is the piece that makes the watchdog's own failure detectable.",
         ],
       },
@@ -254,20 +254,20 @@ export const projects: Project[] = [
       {
         heading: "The serials agreed and the data did not",
         body: [
-          "The main zone was kind NATIVE on the primary and SLAVE on the secondary. NATIVE tells PowerDNS that the underlying database is replicated out of band, so it sends no NOTIFY messages at all. There was no out-of-band replication — no cron job, no timer, no script on either box.",
+          "The main zone was kind NATIVE on the primary and SLAVE on the secondary. NATIVE tells PowerDNS that the underlying database is replicated out of band, so it sends no NOTIFY messages at all. There was no out-of-band replication: no cron job, no timer, no script on either box.",
           "Someone had added a record without bumping the zone serial. Both nodes advertised the same serial while serving different data, and a secondary only pulls a fresh copy when the primary's serial is higher, so it could never resync. Nothing was failing. It was doing exactly what it was configured to do and staying wrong indefinitely.",
           "The proof I captured before changing anything: querying the primary for the drifted record returned an address, the same query against the secondary returned empty, and both SOA serials read identically. A zone transfer diff showed exactly one record difference.",
-          "What was already correct matters here. The primary flag, the also-notify target, and the zone transfer ACL were all set properly — the zone KIND was the entire bug. Setting it to MASTER, bumping the serial and forcing a NOTIFY fixed it, and afterwards all four zones verified at matching serials.",
-          "That drift only bites if the virtual IP actually moves, and it does. keepalived logged 13 state transitions in the preceding 30 days, the most recent when the network interface dropped for about three minutes. Every one of those silently changed which answers the network received. Preemption is not disabled, so the primary grabs the IP straight back on recovery — the address flaps between two servers holding different data.",
+          "What was already correct matters here. The primary flag, the also-notify target, and the zone transfer ACL were all set properly. The zone KIND was the entire bug. Setting it to MASTER, bumping the serial and forcing a NOTIFY fixed it, and afterwards all four zones verified at matching serials.",
+          "That drift only bites if the virtual IP actually moves, and it does. keepalived logged 13 state transitions in the preceding 30 days, the most recent when the network interface dropped for about three minutes. Every one of those silently changed which answers the network received. Preemption is not disabled, so the primary grabs the IP straight back on recovery. The address flaps between two servers holding different data.",
         ],
       },
       {
         heading: "Two health checks that could not fail",
         body: [
           "keepalived decided whether the node was healthy by running dig against a local name and reading the exit code, which is the only thing keepalived looks at. I measured what dig actually exits with on these boxes: 0 on NXDOMAIN, 0 on SERVFAIL, 0 on REFUSED. Only a dead port produced a non-zero status, 9.",
-          "So the check answered exactly one question — is the recursor process still running. If the authoritative server died while the recursor stayed up, every internal name would return NXDOMAIN, the check would keep passing, and the virtual IP would stay parked on the broken node. A check that cannot return failure for the failure you care about is not a health check, it is a process monitor with a misleading name.",
+          "So the check answered exactly one question: is the recursor process still running. If the authoritative server died while the recursor stayed up, every internal name would return NXDOMAIN, the check would keep passing, and the virtual IP would stay parked on the broken node. A check that cannot return failure for the failure you care about is not a health check, it is a process monitor with a misleading name.",
           "My replacement was wrong in the same family. It asserted that the output of dig was non-empty. dig writes its communications errors to stdout, not stderr, so the variable was non-empty precisely when the server was down. I had written a check that passed harder as things got worse.",
-          "The version that shipped checks dig's exit status and then validates the shape of the answer: an SOA record has to have seven fields with a numeric serial. The comment I left in the script is the lesson — never trust dig's stdout without also checking its exit status.",
+          "The version that shipped checks dig's exit status and then validates the shape of the answer: an SOA record has to have seven fields with a numeric serial. The comment I left in the script is the lesson: never trust dig's stdout without also checking its exit status.",
         ],
       },
       {
@@ -283,9 +283,9 @@ export const projects: Project[] = [
         heading: "The outage I caused",
         body: [
           "I took the secondary off the network for about two hours and twenty minutes, and it was entirely my own doing. While applying a resolver configuration change I wrote the netplan YAML with mode 600.",
-          "netplan propagates that mode to the file it generates under /run/systemd/network/, and systemd-networkd runs as its own user, not root. It could not read its own generated config. The journal recorded the whole thing in three lines: permission denied opening the generated network file, then reconfiguring with the dracut default, then acquiring a DHCPv4 address. With its real config unreadable the host fell through to the dracut initramfs DHCP catch-all and picked up a random address — while still holding the virtual IP. For a moment both nodes answered for the same address: a genuine split brain, caused by a file permission. DNS service was never interrupted, because the primary held the IP throughout. That is not a mitigation I designed.",
+          "netplan propagates that mode to the file it generates under /run/systemd/network/, and systemd-networkd runs as its own user, not root. It could not read its own generated config. The journal recorded the whole thing in three lines: permission denied opening the generated network file, then reconfiguring with the dracut default, then acquiring a DHCPv4 address. With its real config unreadable the host fell through to the dracut initramfs DHCP catch-all and picked up a random address, while still holding the virtual IP. For a moment both nodes answered for the same address: a genuine split brain, caused by a file permission. DNS service was never interrupted, because the primary held the IP throughout. That is not a mitigation I designed.",
           "The trap is that netplan warns at mode 644 that permissions are too open, and silently breaks at 600. The warning points the opposite direction from the failure.",
-          "I root-caused it by reading the systemd-networkd journal rather than guessing at it, which is the one part of this I would repeat. Recovery over SSH narrowed the options: netplan apply tears the interface down and is a console-required operation, not something to run on a host you are reaching through that interface. Adding an address with ip addr add is additive and cannot drop the link, so it is safe remotely, and networkctl reload re-reads configuration without touching links. I used those. keepalived needed a restart too — it cannot bind a unicast source address that does not exist, which is why it had been sitting as MASTER holding an address it should not have had.",
+          "I root-caused it by reading the systemd-networkd journal rather than guessing at it, which is the one part of this I would repeat. Recovery over SSH narrowed the options: netplan apply tears the interface down and is a console-required operation, not something to run on a host you are reaching through that interface. Adding an address with ip addr add is additive and cannot drop the link, so it is safe remotely, and networkctl reload re-reads configuration without touching links. I used those. keepalived needed a restart too. It cannot bind a unicast source address that does not exist, which is why it had been sitting as MASTER holding an address it should not have had.",
         ],
       },
       {
@@ -300,7 +300,7 @@ export const projects: Project[] = [
         heading: "Honest limitations",
         body: [
           "This is a homelab DNS pair serving a personal network, not a commercial production system. What I am claiming is the defects found and the testing that found them, not the scale of the thing.",
-          "One defect is still open, deliberately. Neither nameserver can resolve its own zone through the system resolver — both point at a router that does not know the internal zone. Fixing that is the exact class of change that caused the outage above, so it waits until I can do it with console access instead of over SSH. Deferring it with a stated reason is a better answer than doing it a second time from the wrong end of the network.",
+          "One defect is still open, deliberately. Neither nameserver can resolve its own zone through the system resolver: both point at a router that does not know the internal zone. Fixing that is the exact class of change that caused the outage above, so it waits until I can do it with console access instead of over SSH. Deferring it with a stated reason is a better answer than doing it a second time from the wrong end of the network.",
         ],
       },
     ],
@@ -422,7 +422,7 @@ export const projects: Project[] = [
       {
         heading: "Where the speedup stops",
         body: [
-          "Scaling is close to linear up to roughly 8 workers and then flattens. Past that point the job is no longer parse-bound — it is bound by reading the file and by the coordination chatter of handing out and collecting ranges.",
+          "Scaling is close to linear up to roughly 8 workers and then flattens. Past that point the job is no longer parse-bound. It is bound by reading the file and by the coordination chatter of handing out and collecting ranges.",
           "The interesting part of this project was not writing the parser, it was finding that ceiling with profiling and buffer tuning instead of guessing at it. Adding workers past the knee makes the run slower, which is the kind of result that only shows up if you actually measure.",
         ],
       },
@@ -450,7 +450,7 @@ export const projects: Project[] = [
       {
         heading: "What it does",
         body: [
-          "A single entry point in front of multiple backend services. Requests pass through an explicit middleware chain — request ID, structured logging, authentication, rate limiting — before being routed to a backend by path prefix and balanced round-robin across healthy instances.",
+          "A single entry point in front of multiple backend services. Requests pass through an explicit middleware chain (request ID, structured logging, authentication, rate limiting) before being routed to a backend by path prefix and balanced round-robin across healthy instances.",
           "Written from scratch in Go rather than configured on top of an existing proxy, because the point was to understand what a gateway actually has to do.",
         ],
       },
@@ -496,7 +496,7 @@ export const projects: Project[] = [
       {
         heading: "What it is",
         body: [
-          "Three immutable Talos Kubernetes clusters — a management cluster and two workload clusters — planned across my vSphere estate, each on its own VLAN with its own API VIP.",
+          "Three immutable Talos Kubernetes clusters (a management cluster and two workload clusters) planned across my vSphere estate, each on its own VLAN with its own API VIP.",
           "This project is in its design phase and the page says so. What exists today is the part most homelab writeups skip: an architecture doc with an explicit failure model and stated non-goals, a full IP plan covering VLANs, pod and service CIDRs and static addresses, a host-to-VM placement map with DRS rules, a bootstrap runbook, a failure-test catalogue, and a secrets policy that keeps generated Talos configs and secrets out of git.",
         ],
       },
@@ -504,7 +504,7 @@ export const projects: Project[] = [
         heading: "Why design-first",
         body: [
           "Talos has no SSH and no shell. You cannot fix a node by logging into it, which means the config has to be right before the machine boots. That property turns 'write the IP plan first' from good hygiene into a hard requirement, and it is the main reason I picked Talos for this.",
-          "Deciding the failure model on paper — what happens when a host dies, when a VLAN drops, when etcd loses quorum — is also considerably cheaper than discovering it with 18 VMs already running.",
+          "Deciding the failure model on paper (what happens when a host dies, when a VLAN drops, when etcd loses quorum) is also considerably cheaper than discovering it with 18 VMs already running.",
         ],
       },
     ],
@@ -530,7 +530,7 @@ export const projects: Project[] = [
       {
         heading: "Where it actually is",
         body: [
-          "The project is structured as four tiers, and I am partway through the second. T0 (local stack plus an end-to-end tracer-bullet flow) works. T1 adds a dead letter queue, schema evolution, backpressure handling, and basic observability — the producer and consumer with metrics are committed, the rest is in progress.",
+          "The project is structured as four tiers, and I am partway through the second. T0 (local stack plus an end-to-end tracer-bullet flow) works. T1 adds a dead letter queue, schema evolution, backpressure handling, and basic observability. The producer and consumer with metrics are committed, the rest is in progress.",
           "T2 (multi-source ingestion, backfills, hot/cold storage, orchestration) and T3 (reliability drills, SLOs, scale tests, a capacity model) are planned and not started.",
         ],
       },
@@ -602,7 +602,7 @@ export const projects: Project[] = [
       {
         heading: "Managed through the API, with a scoped service account",
         body: [
-          "Day-to-day operations go through the vCenter API rather than the web client. Automation authenticates as a dedicated service account bound to a custom role, and its mutating permissions are scoped to a single VM folder — so an automation bug can damage a sandbox, not the estate.",
+          "Day-to-day operations go through the vCenter API rather than the web client. Automation authenticates as a dedicated service account bound to a custom role, and its mutating permissions are scoped to a single VM folder, so an automation bug can damage a sandbox rather than the estate.",
           "Least privilege is easy to endorse and slightly annoying to implement, which is exactly why it is worth doing on your own infrastructure first. Getting the role definition wrong at home costs an afternoon.",
         ],
       },
