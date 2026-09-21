@@ -12,6 +12,285 @@ interface ContentSection {
 
 export const blogContent: Record<string, ContentSection[]> = {
   // ============================================
+  // CHECKS THAT LIED
+  // ============================================
+  "backup-that-restored-nothing": [
+    {
+      type: "paragraph",
+      content:
+        "The nightly job backed up three Kubernetes clusters. It ran on schedule, exited zero, and wrote its snapshot into restic without complaint. The monitoring signal for backup freshness was green. It had been green for weeks.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "Then I actually restored one, and the single file that makes a cluster rebuild possible came back as zero bytes.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "What the backup was supposed to contain",
+    },
+    {
+      type: "paragraph",
+      content:
+        "Rebuilding an RKE2 cluster from a snapshot needs three things: the etcd snapshot itself, the admin kubeconfig, and the node token. The node token is the piece that matters most. Without it, existing nodes cannot rejoin the restored control plane, so you are not restoring a cluster, you are building a new one and migrating workloads by hand.",
+    },
+    {
+      type: "code",
+      language: "bash",
+      content: "tar cf /tmp/rebuild.tar \\\n  /var/lib/rancher/rke2/server/node-token \\\n  /etc/rancher/rke2/rke2.yaml",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "Why it was empty",
+    },
+    {
+      type: "paragraph",
+      content:
+        "On an RKE2 server, node-token is a symbolic link to a file named token in the same directory. Plain tar archives the link, not the file it points at. Restoring into a fresh directory produced a dangling symlink, which reads as zero bytes.",
+    },
+    {
+      type: "callout",
+      variant: "warning",
+      content:
+        "The backup was not failing. It was succeeding at archiving a pointer. Every log line, every exit code, and the freshness signal were all technically correct.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "This is the second time I have seen this exact shape. An earlier set of Talos cluster secrets was backed up as zero-byte artifacts the same way. Recognising the pattern is the only reason I checked the file size at all.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The verifier was also lying",
+    },
+    {
+      type: "paragraph",
+      content:
+        "There was already a restore-verification script. It restored the archive into a scratch directory and printed a report. On the run that exposed the bug, its output contained both of these lines:",
+    },
+    {
+      type: "code",
+      language: "text",
+      content: "node-token restored: 0 bytes TOO-SMALL\nRESTORE VERIFIED",
+    },
+    {
+      type: "paragraph",
+      content:
+        "It measured the problem correctly and then reported success anyway, because the size check printed a warning instead of setting a non-zero exit. A checker that does not fail on its own failure is worse than no checker, because it converts an unknown into a false assurance.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The fix",
+    },
+    {
+      type: "paragraph",
+      content:
+        "Two changes. Archive with dereference so the link is followed, and assert a minimum real size so an empty result fails the job rather than warning about it.",
+    },
+    {
+      type: "code",
+      language: "bash",
+      content: "# -h dereferences symlinks instead of archiving the link\ntar -chf /tmp/rebuild.tar \\\n  /var/lib/rancher/rke2/server/node-token \\\n  /var/lib/rancher/rke2/server/token \\\n  /etc/rancher/rke2/rke2.yaml\n\n# and the verifier must fail, not warn\nsize=$(stat -c%s \"$RESTORED/node-token\")\nif [ \"$size\" -lt 50 ]; then\n  echo \"FAIL: node-token is $size bytes\"\n  exit 1\nfi",
+    },
+    {
+      type: "paragraph",
+      content:
+        "All three clusters now restore a node-token of 109 real bytes, verified by restoring it rather than by trusting the job's exit code. The same bug was live in the dev cluster's backup script since the day it was written, and was fixed there too.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "What I took from it",
+    },
+    {
+      type: "paragraph",
+      content:
+        "A backup you have never restored is not a backup, it is a belief. The useful version of that rule is narrower than it sounds: it is not enough to restore and eyeball the output, because I had a script doing exactly that and it told me everything was fine. The assertion has to be mechanical, and failing the assertion has to fail the job.",
+    },
+  ],
+
+  "failover-test-that-proved-nothing": [
+    {
+      type: "paragraph",
+      content:
+        "The production Kubernetes control plane sits behind a virtual IP managed by kube-vip in ARP mode. One node holds the address; if it dies, another should claim it within seconds. That is the entire point of the component, so before putting anything real on the cluster I tested it.",
+    },
+    {
+      type: "paragraph",
+      content: "The test passed. The result was worthless.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The first attempt",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The obvious way to test a control-plane failover is to stop the control plane. I stopped the RKE2 server process on the node currently holding the VIP, then polled the API through the virtual address until it answered again.",
+    },
+    {
+      type: "code",
+      language: "text",
+      content: "holder BEFORE: 10.110.0.41\nAPI through VIP: ok\nrecovered in ~0s\nholder AFTER : 10.110.0.41",
+    },
+    {
+      type: "paragraph",
+      content:
+        "Zero seconds of downtime looks like an excellent result until you read the last line. The address never moved. The same node held it before and after, so nothing failed over and the test measured nothing.",
+    },
+    {
+      type: "callout",
+      variant: "warning",
+      content:
+        "kube-vip runs as a DaemonSet pod with its own leadership lease. Stopping the API server did not stop that pod, so it kept renewing its claim on the address. I had tested that the API restarts quickly, not that the VIP moves.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "This is the same trap as deleting a pod that a DaemonSet recreates in two seconds and concluding the workload is resilient. The system repaired the thing I broke, not the thing I was asking about.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The second attempt",
+    },
+    {
+      type: "paragraph",
+      content:
+        "To force a real leadership transfer I had to remove the component holding the lease, on the specific node holding it. Not a node reboot, not an API restart: delete the kube-vip pod on the current holder and watch where the address lands.",
+    },
+    {
+      type: "code",
+      language: "text",
+      content: "holder BEFORE: 10.110.0.41\nVIP MOVED to : 10.110.0.43  after ~3s\nAPI through VIP: ok\nfinal holders: 10.110.0.43 (count=1)",
+    },
+    {
+      type: "paragraph",
+      content:
+        "Three seconds, the API stayed reachable through the virtual address, and exactly one node claimed it at the end. That last number is the one I care about most. A count of zero is an outage; a count of two or more is split brain, where two machines answer for the same address and clients get whichever one ARP happens to favour.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The holder count is now a monitored signal for the same reason. It is the failure mode that does not announce itself: everything appears to work until two nodes disagree about state.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "What I took from it",
+    },
+    {
+      type: "paragraph",
+      content:
+        "An inconclusive test is worth less than no test, because no test leaves you appropriately uncertain while an inconclusive one leaves you confident and wrong. Before running a resilience test now, I write down which specific component must lose its role, and what observable value has to change if the test actually exercised anything. If I cannot name that value in advance, I am not testing, I am hoping.",
+    },
+  ],
+
+  "runbook-that-never-worked": [
+    {
+      type: "paragraph",
+      content:
+        "An automation agent watches for alerts and runs named remediations from an allowlist. One of them restarts a container on a host. It had passed its guardrail test suite on every run for weeks.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The first time I watched it execute end to end, it failed. It had never worked, on any host, since the day it was written.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The error",
+    },
+    {
+      type: "code",
+      language: "text",
+      content: "no configuration file provided: not found",
+    },
+    {
+      type: "paragraph",
+      content:
+        "That is the message docker compose gives when it cannot find a compose file in the working directory. The runbook built what looked like a perfectly reasonable remote command:",
+    },
+    {
+      type: "code",
+      language: "python",
+      content: 'argv = ["ssh", host, "bash", "-lc",\n        "cd /opt/stack && docker compose restart blackbox"]',
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "Why it failed",
+    },
+    {
+      type: "paragraph",
+      content:
+        "ssh does not preserve argument boundaries. It joins everything after the hostname with spaces into a single string and hands that to the remote login shell, which parses it again from scratch. The quoting that grouped those words into one argument locally does not survive the trip.",
+    },
+    {
+      type: "code",
+      language: "text",
+      content: "# what the remote shell actually received\nbash -lc cd /opt/stack && docker compose restart blackbox\n\n# which it read as two separate commands\nbash -lc cd /opt/stack\ndocker compose restart blackbox",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The first command changed directory inside a shell that immediately exited. The second ran in the login shell's home directory, where there is no compose file. I confirmed it by replacing the payload with pwd, which printed the home directory rather than the stack directory.",
+    },
+    {
+      type: "callout",
+      variant: "warning",
+      content:
+        "The same defect affected every host the runbook could target. It was not a host-specific misconfiguration; the action had simply never functioned.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "Why the tests never caught it",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The guardrail suite existed to answer a security question: can this action be tricked into touching a host or a service outside its allowlist? It built the argument list, asserted the host and service were permitted, and asserted that disallowed input was rejected. Every one of those assertions was correct, and none of them ran the command.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The suite validated arguments. The bug lived in what happens to those arguments in transit. No amount of argument checking can see a transport that reinterprets them.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "The fix, and the fix that broke something else",
+    },
+    {
+      type: "paragraph",
+      content:
+        "My first correction quoted the directory path before interpolating it. That is the textbook answer, and it broke every host whose stack directory is written relative to the home directory, because quoting a leading tilde turns it into a literal directory name that does not exist.",
+    },
+    {
+      type: "paragraph",
+      content:
+        "The guardrail suite caught that regression with two failures, which was the first genuinely useful thing it had done. The working form passes the whole payload as a single argument and leaves tilde expansion to the remote shell. After the fix: fifteen of fifteen guardrails passing, plus a real container restart with probes green afterwards.",
+    },
+    {
+      type: "heading",
+      level: 2,
+      content: "What I took from it",
+    },
+    {
+      type: "paragraph",
+      content:
+        "A test suite that has never executed the thing it guards is measuring your intentions, not your system. The security assertions were worth keeping, but they created a false impression of coverage: the action was verified in the sense that mattered least. Any remediation that can be run unattended now has at least one test that actually runs it against something real and checks the result, not just the arguments.",
+    },
+  ],
+
+  // ============================================
   // KUBERNETES SERIES
   // ============================================
   "kubernetes-cluster-architecture": [

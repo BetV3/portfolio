@@ -45,6 +45,13 @@ export const series: BlogSeries[] = [
     color: "emerald",
   },
   {
+    id: "things-that-lied",
+    title: "Checks That Lied",
+    description:
+      "Three times a green signal meant nothing: a backup that restored an empty file, a failover test that proved the opposite of what it claimed, and a runbook that had never once worked.",
+    color: "red",
+  },
+  {
     id: "homelab-journey",
     title: "Homelab Journey",
     description:
@@ -54,6 +61,49 @@ export const series: BlogSeries[] = [
 ];
 
 export const posts: BlogPost[] = [
+  // ============================================
+  // CHECKS THAT LIED (3 posts)
+  // ============================================
+  {
+    slug: "backup-that-restored-nothing",
+    published: true,
+    title: "The Backup That Restored an Empty File",
+    description:
+      "A nightly Kubernetes backup reported success for weeks. Every restore produced a zero-byte cluster token, because tar archived a symlink instead of following it.",
+    date: "2026-09-20",
+    category: "Operations",
+    readTime: "6 min read",
+    series: "things-that-lied",
+    seriesOrder: 1,
+    tags: ["Kubernetes", "Backups", "etcd", "Incident"],
+    featured: true,
+  },
+  {
+    slug: "failover-test-that-proved-nothing",
+    published: true,
+    title: "A Failover Test That Passed and Proved Nothing",
+    description:
+      "Stopping the API server on the node holding the virtual IP produced a clean pass in zero seconds. The address never moved, which is exactly why the result was worthless.",
+    date: "2026-09-20",
+    category: "Operations",
+    readTime: "5 min read",
+    series: "things-that-lied",
+    seriesOrder: 2,
+    tags: ["Kubernetes", "High Availability", "Testing", "Incident"],
+  },
+  {
+    slug: "runbook-that-never-worked",
+    published: true,
+    title: "The Runbook That Had Never Worked",
+    description:
+      "An automated restart action passed its guardrail suite for weeks. It had never successfully restarted anything, on any host, because ssh does not preserve argument boundaries.",
+    date: "2026-09-21",
+    category: "Automation",
+    readTime: "6 min read",
+    series: "things-that-lied",
+    seriesOrder: 3,
+    tags: ["Automation", "SSH", "Testing", "Incident"],
+  },
   // ============================================
   // KUBERNETES IN PRODUCTION SERIES (5 posts)
   // ============================================
@@ -73,7 +123,13 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "kubernetes-gitops-argocd",
-    published: true,
+    // Unpublished 2026-09-21. The post claims "I evaluated several GitOps
+    // tools including Flux, Jenkins X, and ArgoCD" and walks through an
+    // ArgoCD Application manifest, but no cluster in this fleet runs ArgoCD
+    // or Flux. Generic tutorial content presented as first-hand experience
+    // is the same credibility problem as a fabricated metric. Rewrite it
+    // from a real deployment or leave it down.
+    published: false,
     title: "GitOps with ArgoCD: Declarative Kubernetes Deployments",
     description:
       "Implementing GitOps workflows with ArgoCD for automated, auditable, and rollback-friendly deployments to Kubernetes.",

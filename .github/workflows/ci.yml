@@ -150,6 +150,78 @@ jobs:
           [ "$RC" = 0 ] && echo "No superseded figures found."
           exit $RC
 
+      # ---- repo-specific check 1e: blog integrity ------------------------
+      # Two failure modes this catches:
+      #   a) a published post with no body. The renderer falls back to
+      #      `blogContent[slug] ?? []`, so a missing entry produces a page
+      #      of chrome with nothing in it and still builds clean.
+      #   b) placeholder identifiers in published prose. `myorg` and
+      #      `my-app` in a code sample are the clearest possible signal
+      #      that a post is generic tutorial content rather than
+      #      first-hand experience, on a site whose whole argument is that
+      #      its claims are checkable.
+      - name: Blog posts have real content
+        run: |
+          set -uo pipefail
+          node -e '
+            const fs = require("fs");
+            const blog = fs.readFileSync("src/data/blog.ts", "utf8");
+            const content = fs.readFileSync("src/data/blog-content.ts", "utf8");
+
+            // published slugs. The window must reach past any explanatory
+            // comment between the slug and the published flag, but must not
+            // run into the NEXT post, so it stops at the following slug.
+            const live = [];
+            const parts = blog.split(/slug:\s*"/).slice(1);
+            for (const p of parts) {
+              const slug = p.slice(0, p.indexOf("\""));
+              const head = p.slice(0, p.indexOf("\n  },") + 1 || 1200);
+              if (/published:\s*true/.test(head)) live.push(slug);
+            }
+
+            // slugs that have a content entry, with their block text
+            const keyMatches = [...content.matchAll(/\n  "?([a-z0-9-]+)"?:\s*\[/g)];
+            const keys = new Set(keyMatches.map(m => m[1]));
+            const blocks = {};
+            keyMatches.forEach((m, i) => {
+              const start = m.index;
+              const end = i + 1 < keyMatches.length ? keyMatches[i + 1].index : content.length;
+              blocks[m[1]] = content.slice(start, end);
+            });
+
+            let fail = 0;
+            for (const slug of live) {
+              if (!keys.has(slug)) {
+                console.log(`  EMPTY   ${slug} is published but has no content entry`);
+                fail = 1;
+              }
+            }
+
+            // Placeholders only matter in PUBLISHED prose. An unpublished
+            // draft may legitimately still contain them; it is not on the
+            // site. Scoping this to live posts is the difference between a
+            // check that states the real rule and one that just nags.
+            const placeholders = [/\bmyorg\b/i, /\bmy-app\b/i, /\byour-[a-z-]+\b/i,
+                                  /example\.com/i, /CHANGEME/i, /\bTODO\b/];
+            for (const slug of live) {
+              const body = blocks[slug] || "";
+              for (const re of placeholders) {
+                const m = body.match(re);
+                if (m) {
+                  console.log(`  PLACEHOLDER ${m[0]} in published post ${slug}`);
+                  fail = 1;
+                }
+              }
+            }
+
+            console.log(`  published posts: ${live.length}, content entries: ${keys.size}`);
+            if (fail) {
+              console.log("::error::Blog content check failed.");
+              process.exit(1);
+            }
+            console.log("Blog content OK.");
+          '
+
       # ---- repo-specific check 2: pages must RENDER, not merely build ----
       # A Next.js static export happily emits a page whose body is empty.
       # `next build` passing proves the bundle compiled, not that a visitor
