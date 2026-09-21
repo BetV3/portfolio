@@ -90,6 +90,38 @@ jobs:
           fi
           echo "No em dashes found."
 
+      # ---- repo-specific check 1d: every outbound link must resolve -------
+      # A 404 on a project's repo link is worse than no link: it reads as a
+      # fabricated reference on a page whose entire argument is "these
+      # numbers are real, go check". GitHub rate-limits anonymous HTML, so
+      # 429 is retried with backoff and never treated as dead.
+      - name: Outbound links resolve
+        run: |
+          set -uo pipefail
+          UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
+          grep -ohE '(github|demo): "https?://[^"]+"' src/data/projects.ts \
+            | sed -E 's/.*"(https?:[^"]+)"/\1/' | sort -u > /tmp/urls.txt
+          echo "checking $(wc -l < /tmp/urls.txt) urls"
+          FAIL=0
+          while read -r u; do
+            [ -z "$u" ] && continue
+            for attempt in 1 2 3; do
+              code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
+                       --max-time 20 -L "$u" || echo 000)
+              case "$code" in
+                200) break ;;
+                429) sleep $((attempt * 10)) ;;
+                *)   sleep 3 ;;
+              esac
+            done
+            if [ "$code" = 200 ]; then
+              echo "  ok   $u"
+            else
+              echo "  DEAD $code $u"; FAIL=1
+            fi
+          done < /tmp/urls.txt
+          [ $FAIL -eq 0 ] || { echo "::error::A project link does not resolve."; exit 1; }
+
       # ---- repo-specific check 2: pages must RENDER, not merely build ----
       # A Next.js static export happily emits a page whose body is empty.
       # `next build` passing proves the bundle compiled, not that a visitor

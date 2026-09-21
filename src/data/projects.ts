@@ -112,6 +112,7 @@ export const projects: Project[] = [
   },
   {
     slug: "fleet-watchdog",
+    github: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
     title: "Fleet Watchdog",
     tagline:
       "A ~250-line Python watchdog that runs on a different host from the agent fleet it watches, built after a cron job failed 970 times in four days and alerted exactly once.",
@@ -307,6 +308,7 @@ export const projects: Project[] = [
   },
   {
     slug: "verified-backups",
+    github: "https://github.com/BetV3/Homelab_Scripts/tree/main/backup",
     title: "Restore-Tested Backups",
     tagline:
       "Nightly restic backups to a host on different physical hardware, proven by an actual restore: 9,849 messages read back out of the restored database.",
@@ -571,6 +573,7 @@ export const projects: Project[] = [
   },
   {
     slug: "homelab",
+    github: "https://github.com/BetV3/Homelab_Scripts",
     title: "Homelab Infrastructure",
     tagline:
       "A 7-host vSphere cluster that runs everything else on this page, managed through the vCenter API rather than the web UI.",
@@ -616,6 +619,7 @@ export const projects: Project[] = [
   },
   {
     slug: "k8s-three-environments",
+    github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py",
     title: "Three-Environment Kubernetes Platform",
     tagline:
       "dev, staging and production RKE2 clusters on bare vSphere, with VIP failover proved by forcing a leadership transfer rather than assuming one.",
@@ -674,6 +678,7 @@ export const projects: Project[] = [
   },
   {
     slug: "observability-stack",
+    github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py",
     title: "Fleet Observability",
     tagline:
       "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me -- alerting stays in one place.",
@@ -736,6 +741,7 @@ export const projects: Project[] = [
   },
   {
     slug: "public-edge",
+    github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py",
     title: "Public Edge Without Inbound Ports",
     tagline:
       "Exposing an on-premise Kubernetes cluster to the internet through a Cloudflare tunnel, while the existing production site keeps serving as the rollback.",
