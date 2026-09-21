@@ -72,23 +72,57 @@ jobs:
           fi
           echo "No placeholder content found."
 
-      # ---- repo-specific check 1c: no em dashes ---------------------------
-      # Em dashes are a well-known tell for LLM-generated prose. This site is
-      # a job-hunt asset and the copy needs to read as written by a person.
-      # Blocked at CI because re-introducing one is a single keystroke and
-      # nobody proofreads a diff for punctuation.
-      - name: No em dashes
+      # ---- repo-specific check 1c: no dash tells --------------------------
+      # Em dashes read as an LLM tell. So does ' -- ' in prose, which is
+      # what a careless em-dash removal leaves behind.
+      #
+      # This scans public/ as well as src/. An earlier version did not, and
+      # four generated SVG diagrams shipped with nine em dashes in their
+      # labels because the check could not see the directory they live in.
+      # A check that does not cover where the content actually is provides
+      # confidence without coverage.
+      #
+      # SQL comments in blog code samples are legitimately '--' and are
+      # excluded by path, not by weakening the pattern.
+      - name: No em dashes or double hyphens
         run: |
           set -uo pipefail
-          if grep -rInP '\x{2014}' \
+          RC=0
+
+          # Only scan paths that exist. grep exits 2 on a missing path, and
+          # `if grep ...` treats that as "no match", so listing a directory
+          # that is not in the repo silently disables the whole check. That
+          # is exactly how this check passed while nine em dashes sat in
+          # public/*.svg.
+          SCAN=""
+          for d in src content public; do
+            [ -e "$d" ] && SCAN="$SCAN $d"
+          done
+          echo "scanning:$SCAN"
+
+          if grep -rInP '[\x{2014}\x{2013}]' \
                --include='*.ts' --include='*.tsx' --include='*.md' \
-               --include='*.mdx' --include='*.json' \
-               src content 2>/dev/null; then
-            echo
-            echo "::error::Em dash (U+2014) found above. Use a comma, colon, period, or parentheses."
-            exit 1
+               --include='*.mdx' --include='*.json' --include='*.svg' \
+               $SCAN 2>/dev/null; then
+            echo "::error::Em or en dash found above. Use a comma, colon, period, or parentheses."
+            RC=1
           fi
-          echo "No em dashes found."
+
+          # ' -- ' surrounded by spaces is always prose, never a CLI flag
+          DSCAN=""
+          for d in src/data/projects.ts src/app public; do
+            [ -e "$d" ] && DSCAN="$DSCAN $d"
+          done
+          if grep -rInE '[^-]-- [^-]' \
+               --include='*.ts' --include='*.tsx' --include='*.md' \
+               --include='*.mdx' --include='*.svg' \
+               $DSCAN 2>/dev/null; then
+            echo "::error::Double hyphen in prose. It reads as an em dash."
+            RC=1
+          fi
+
+          [ $RC = 0 ] && echo "No dash tells found."
+          exit $RC
 
       # ---- repo-specific check 1d: every outbound link must resolve -------
       # A 404 on a project's repo link is worse than no link: it reads as a
@@ -221,6 +255,31 @@ jobs:
             }
             console.log("Blog content OK.");
           '
+
+      # ---- repo-specific check 1f: no dangling asset references ----------
+      # A hashed asset name and a stale reference produce a 404 that is
+      # invisible in development and can be masked in production by a CDN
+      # still serving the old path. That happened here: a test harness
+      # restored projects.ts from a backup taken before a rehash, and the
+      # page then requested a filename that no longer existed while
+      # Cloudflare kept serving the cached old copy.
+      - name: Image references resolve
+        run: |
+          set -uo pipefail
+          RC=0
+          grep -ohE 'image: "/[^"]+"' src/data/projects.ts \
+            | sed -E 's|image: "/([^"]+)"|\1|' | sort -u > /tmp/assets.txt
+          echo "referenced assets: $(wc -l < /tmp/assets.txt)"
+          while read -r a; do
+            [ -z "$a" ] && continue
+            if [ -f "public/$a" ]; then
+              echo "  ok   $a"
+            else
+              echo "  MISS $a"; RC=1
+            fi
+          done < /tmp/assets.txt
+          [ $RC = 0 ] || echo "::error::A page references an asset that is not in public/."
+          exit $RC
 
       # ---- repo-specific check 2: pages must RENDER, not merely build ----
       # A Next.js static export happily emits a page whose body is empty.

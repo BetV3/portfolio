@@ -633,7 +633,7 @@ export const projects: Project[] = [
           "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
           "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
         ],
-        image: "/infrastructure-map.664f1a94.svg",
+        image: "/infrastructure-map.62202ddb.svg",
         imageAlt:
           "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
         imageCaption:
@@ -670,7 +670,7 @@ export const projects: Project[] = [
       {
         heading: "What it is",
         body: [
-          "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo -- no DHCP, no manual installs.",
+          "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo. No DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
         image: "/diagram-k8s-environments.d5356cc8.svg",
@@ -683,8 +683,8 @@ export const projects: Project[] = [
         heading: "The failover test that first gave a false pass",
         body: [
           "The obvious way to test a control-plane VIP is to stop the API server on whichever node holds it. I did that, the API recovered in about a second, and the test looked green.",
-          "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was -- the address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
-          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from 10.110.0.41 to 10.110.0.43 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions -- zero holders is an outage, two or more is a split brain.",
+          "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was. The address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
+          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from 10.110.0.41 to 10.110.0.43 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions: zero holders is an outage, two or more is a split brain.",
         ],
       },
       {
@@ -693,7 +693,7 @@ export const projects: Project[] = [
           "The first staging VMs booted cleanly, reported healthy VMware Tools, and had no IP address. Four separate defects were hiding behind that one symptom.",
           "govc's vm.create defaults to an E1000 adapter, which enumerates as ens160 while the netplan targeted ens192. The -disk 0 form segfaults govc outright; the supported form is -disk <path> -link=false. datastore.cp will not create its target directory, and vm.destroy removes it, so a recreate fails on a missing path.",
           "The real one was firmware. The Ubuntu cloud image has no EFI system partition, so an EFI virtual machine boots to an empty device list and never reaches the disk. The working nodes were BIOS. vm.change has no firmware flag, so fixing it meant destroy and recreate.",
-          "I found it by diffing a broken VM against a working one field by field, after a console screenshot showed Ubuntu booting fine with the hostname applied -- which proved cloud-init had run and narrowed the fault to networking alone.",
+          "I found it by diffing a broken VM against a working one field by field, after a console screenshot showed Ubuntu booting fine with the hostname applied, which proved cloud-init had run and narrowed the fault to networking alone.",
         ],
       },
       {
@@ -710,7 +710,7 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py",
     title: "Fleet Observability",
     tagline:
-      "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me -- alerting stays in one place.",
+      "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
     category: "Infrastructure",
     status: "live",
     accent: "cyan",
@@ -740,7 +740,7 @@ export const projects: Project[] = [
       {
         heading: "Hosted where it can survive what it watches",
         body: [
-          "The collector does not run inside the clusters it observes. A production outage would take out the dashboard showing the outage -- the same reasoning that keeps the watchdog outside the scheduler it monitors.",
+          "The collector does not run inside the clusters it observes. A production outage would take out the dashboard showing the outage, the same reasoning that keeps the watchdog outside the scheduler it monitors.",
           "It also did not go on the existing monitoring host, which had 25 GB free on a 40 GB disk and was already the single place everything was watched from.",
         ],
       },
@@ -748,8 +748,8 @@ export const projects: Project[] = [
         heading: "A metric that changed what I believed about the storage",
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
-          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile at 13.63 ms on dev and 12.74 ms on production, against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied -- and now trended rather than guessed.",
-          "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging -- which has a single etcd member -- was briefly unavailable, which I planned for rather than discovered.",
+          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile at 13.63 ms on dev and 12.74 ms on production, against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },
       {
@@ -762,7 +762,7 @@ export const projects: Project[] = [
       {
         heading: "Watching the watcher",
         body: [
-          "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals -- including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
+          "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals, including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
         image: "/diagram-observability.c7e27967.svg",
@@ -812,14 +812,14 @@ export const projects: Project[] = [
         heading: "Migrating a live job-hunt asset carefully",
         body: [
           "The site this would eventually serve is the one recruiters actually visit, so the cutover is staged rather than clever. The new path was proved on a subdomain first while the existing production hosting kept serving the apex untouched, and the deployment script refuses to modify the apex record at all.",
-          "The first success was a 404 -- served by my own ingress controller, from the public internet, through the tunnel. That is exactly the right result when no application is deployed behind it yet, and it proves the whole path end to end.",
+          "The first success was a 404, served by my own ingress controller, from the public internet, through the tunnel. That is exactly the right result when no application is deployed behind it yet, and it proves the whole path end to end.",
         ],
       },
       {
         heading: "Signals that test the path, not the parts",
         body: [
           "A tunnel reporting 'healthy' only means a connector attached. It says nothing about whether the hostname reaches a live origin, which is the same 'green at every step, producing nothing' shape as a pipeline that runs perfectly and emits no output.",
-          "So the checks are layered: connections, connector process, and -- the one that matters -- the public hostname answering. That last check treats any 2xx through 4xx as success, because a 404 proves my nginx answered, while a 502 means the origin is dead. Certificate expiry is tracked as a graph for every endpoint, after an internal certificate expired unnoticed and broke continuous integration for several hours.",
+          "So the checks are layered: connections, connector process, and the one that matters most, the public hostname answering. That last check treats any 2xx through 4xx as success, because a 404 proves my nginx answered, while a 502 means the origin is dead. Certificate expiry is tracked as a graph for every endpoint, after an internal certificate expired unnoticed and broke continuous integration for several hours.",
         ],
       },
     ],
