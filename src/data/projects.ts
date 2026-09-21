@@ -588,8 +588,8 @@ export const projects: Project[] = [
     metrics: [
       { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01" },
       { label: "CPU cores", value: "132", subtext: "aggregate physical" },
-      { label: "Memory", value: "~607 GB", subtext: "aggregate" },
-      { label: "VMs", value: "32", subtext: "at time of writing" },
+      { label: "Memory", value: "608 GB", subtext: "257 GB in use (42%)" },
+      { label: "VMs", value: "46", subtext: "powered on of 53, read from the vCenter API" },
     ],
     sections: [
       {
@@ -610,6 +610,171 @@ export const projects: Project[] = [
         heading: "Remote access with no inbound ports",
         body: [
           "Nothing in the lab is exposed by port forwarding. External access runs over Cloudflare tunnels, so the lab makes outbound connections and there is no inbound attack surface on my home IP.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "k8s-three-environments",
+    title: "Three-Environment Kubernetes Platform",
+    tagline:
+      "dev, staging and production RKE2 clusters on bare vSphere, with VIP failover proved by forcing a leadership transfer rather than assuming one.",
+    category: "Infrastructure",
+    status: "live",
+    accent: "emerald",
+    order: 11,
+    featured: true,
+    tech: [
+      { name: "RKE2 v1.36.4", category: "Kubernetes" },
+      { name: "kube-vip", category: "Control-plane VIP" },
+      { name: "Cilium", category: "CNI" },
+      { name: "ingress-nginx", category: "Ingress" },
+      { name: "etcd", category: "State" },
+      { name: "govc / cloud-init", category: "Provisioning" },
+    ],
+    metrics: [
+      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6" },
+      { label: "Nodes Ready", value: "15/15", subtext: "across all three" },
+      { label: "etcd fsync p99", value: "12.74 ms", subtext: "prod, against a 25 ms budget" },
+      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer" },
+    ],
+    sections: [
+      {
+        heading: "What it is",
+        body: [
+          "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo -- no DHCP, no manual installs.",
+          "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
+        ],
+      },
+      {
+        heading: "The failover test that first gave a false pass",
+        body: [
+          "The obvious way to test a control-plane VIP is to stop the API server on whichever node holds it. I did that, the API recovered in about a second, and the test looked green.",
+          "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was -- the address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
+          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from 10.110.0.41 to 10.110.0.43 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions -- zero holders is an outage, two or more is a split brain.",
+        ],
+      },
+      {
+        heading: "Four provisioning traps, all of which looked like something else",
+        body: [
+          "The first staging VMs booted cleanly, reported healthy VMware Tools, and had no IP address. Four separate defects were hiding behind that one symptom.",
+          "govc's vm.create defaults to an E1000 adapter, which enumerates as ens160 while the netplan targeted ens192. The -disk 0 form segfaults govc outright; the supported form is -disk <path> -link=false. datastore.cp will not create its target directory, and vm.destroy removes it, so a recreate fails on a missing path.",
+          "The real one was firmware. The Ubuntu cloud image has no EFI system partition, so an EFI virtual machine boots to an empty device list and never reaches the disk. The working nodes were BIOS. vm.change has no firmware flag, so fixing it meant destroy and recreate.",
+          "I found it by diffing a broken VM against a working one field by field, after a console screenshot showed Ubuntu booting fine with the hostname applied -- which proved cloud-init had run and narrowed the fault to networking alone.",
+        ],
+      },
+      {
+        heading: "A constraint I could not engineer around",
+        body: [
+          "The design called for separate subnets per environment. Only one VLAN is trunked to the hosts, and new port groups would need physical switch and router changes I could not make remotely.",
+          "So the three clusters share a single L2 segment with IP-range separation instead. That is worth stating plainly rather than hiding: dev, staging and production are not network-isolated from each other. It is documented as a known limitation to revisit before production carries anything sensitive.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "observability-stack",
+    title: "Fleet Observability",
+    tagline:
+      "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me -- alerting stays in one place.",
+    category: "Infrastructure",
+    status: "live",
+    accent: "cyan",
+    order: 12,
+    tech: [
+      { name: "VictoriaMetrics", category: "TSDB" },
+      { name: "vmagent", category: "Scraping" },
+      { name: "Grafana", category: "Dashboards" },
+      { name: "blackbox_exporter", category: "Synthetic probes" },
+      { name: "node_exporter", category: "Host metrics" },
+      { name: "vmware_exporter", category: "Hypervisor metrics" },
+    ],
+    metrics: [
+      { label: "Scrape targets", value: "76", subtext: "all up at time of writing" },
+      { label: "Ingest rate", value: "25.8M/hr", subtext: "samples into VictoriaMetrics" },
+      { label: "Dashboard panels", value: "30", subtext: "every one verified to return real series" },
+      { label: "Alert signals", value: "82", subtext: "in the watchdog, not in Grafana" },
+    ],
+    sections: [
+      {
+        heading: "The distinction the design is built around",
+        body: [
+          "A watchdog answers 'is it broken?'. Observability answers 'why, and what changed?'. Those are different jobs and I deliberately did not merge them.",
+          "The existing watchdog stays the only alerting path: it runs outside the agent scheduler it monitors, fails closed, and carries stable signal IDs I can cite. The metrics stack installs no Alertmanager at all. If a metric deserves to page someone it becomes a watchdog signal instead. Two alerting systems means two places to miss an outage.",
+        ],
+      },
+      {
+        heading: "Hosted where it can survive what it watches",
+        body: [
+          "The collector does not run inside the clusters it observes. A production outage would take out the dashboard showing the outage -- the same reasoning that keeps the watchdog outside the scheduler it monitors.",
+          "It also did not go on the existing monitoring host, which had 25 GB free on a 40 GB disk and was already the single place everything was watched from.",
+        ],
+      },
+      {
+        heading: "A metric that changed what I believed about the storage",
+        body: [
+          "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
+          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile at 13.63 ms on dev and 12.74 ms on production, against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied -- and now trended rather than guessed.",
+          "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging -- which has a single etcd member -- was briefly unavailable, which I planned for rather than discovered.",
+        ],
+      },
+      {
+        heading: "Verifying dashboards the way a browser does",
+        body: [
+          "A dashboard that loads with empty panels is the visual form of a green check that means nothing, so I verified by executing every panel's query through Grafana's own datasource proxy and asserting each returned a non-empty series.",
+          "That caught a real bug. One panel rendered blank while both halves of its expression returned 23 series each. The left side carried environment and role labels that the aggregated right side did not, and a binary operation between them requires an exact label-set match, so the join produced nothing. My first guess at the cause was wrong and the redeploy proved it still empty; the fix only came from testing candidate expressions directly against the database.",
+        ],
+      },
+      {
+        heading: "Watching the watcher",
+        body: [
+          "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals -- including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
+          "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "public-edge",
+    title: "Public Edge Without Inbound Ports",
+    tagline:
+      "Exposing an on-premise Kubernetes cluster to the internet through a Cloudflare tunnel, while the existing production site keeps serving as the rollback.",
+    category: "Infrastructure",
+    status: "live",
+    accent: "rose",
+    order: 13,
+    tech: [
+      { name: "Cloudflare Tunnel", category: "Ingress" },
+      { name: "cloudflared", category: "Connector" },
+      { name: "ingress-nginx", category: "Origin" },
+      { name: "step-ca", category: "Internal PKI" },
+      { name: "PowerDNS", category: "Internal DNS" },
+    ],
+    metrics: [
+      { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere" },
+      { label: "Tunnel connections", value: "4", subtext: "healthy at time of writing" },
+      { label: "Probe coverage", value: "21", subtext: "ICMP, DNS, HTTP and TCP checks" },
+    ],
+    sections: [
+      {
+        heading: "Shape",
+        body: [
+          "Traffic reaches Cloudflare, travels down an outbound-only tunnel to a connector running on a production control-plane node, and lands on the cluster's ingress controller at a pinned node port. Nothing listens on the public internet and no router rule was changed.",
+          "I created a separate tunnel rather than extending the existing one, so it has its own credentials and its own failure domain and can be deleted without touching anything already working.",
+        ],
+      },
+      {
+        heading: "Migrating a live job-hunt asset carefully",
+        body: [
+          "The site this would eventually serve is the one recruiters actually visit, so the cutover is staged rather than clever. The new path was proved on a subdomain first while the existing production hosting kept serving the apex untouched, and the deployment script refuses to modify the apex record at all.",
+          "The first success was a 404 -- served by my own ingress controller, from the public internet, through the tunnel. That is exactly the right result when no application is deployed behind it yet, and it proves the whole path end to end.",
+        ],
+      },
+      {
+        heading: "Signals that test the path, not the parts",
+        body: [
+          "A tunnel reporting 'healthy' only means a connector attached. It says nothing about whether the hostname reaches a live origin, which is the same 'green at every step, producing nothing' shape as a pipeline that runs perfectly and emits no output.",
+          "So the checks are layered: connections, connector process, and -- the one that matters -- the public hostname answering. That last check treats any 2xx through 4xx as success, because a 404 proves my nginx answered, while a 502 means the origin is dead. Certificate expiry is tracked as a graph for every endpoint, after an internal certificate expired unnoticed and broke continuous integration for several hours.",
         ],
       },
     ],
