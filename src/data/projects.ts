@@ -573,7 +573,7 @@ export const projects: Project[] = [
   },
   {
     slug: "homelab",
-    github: "https://github.com/BetV3/Homelab_Scripts",
+    github: "https://github.com/BetV3/Homelab_Scripts/tree/main/vsphere",
     title: "Homelab Infrastructure",
     tagline:
       "A 7-host vSphere cluster that runs everything else on this page, managed through the vCenter API rather than the web UI.",
@@ -613,6 +613,14 @@ export const projects: Project[] = [
         heading: "Remote access with no inbound ports",
         body: [
           "Nothing in the lab is exposed by port forwarding. External access runs over Cloudflare tunnels, so the lab makes outbound connections and there is no inbound attack surface on my home IP.",
+        ],
+      },
+      {
+        heading: "What the hardware can and cannot do",
+        body: [
+          "Capacity planning on used enterprise hardware needs measurement, not spec sheets. Guests here report no AVX2, which looks like an EVC baseline masking it. It is not. The hosts are Sandy Bridge and Ivy Bridge, and AVX2 arrived with Haswell, so the instruction set is physically absent and no cluster setting can expose it.",
+          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 7 percent CPU with 42 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
+          "The scripts that produced those measurements are in the linked repository, so the claim is checkable rather than asserted.",
         ],
       },
     ],
