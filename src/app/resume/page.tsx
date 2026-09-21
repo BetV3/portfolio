@@ -162,8 +162,8 @@ export default function ResumePage() {
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
                 Administer a seven-host ESXi cluster under vCenter 8 (132
-                cores, ~607 GB RAM, 32 VMs), operated through the vCenter API
-                rather than the web client.
+                cores, 608 GB RAM, 46 powered-on VMs), operated through the
+                vCenter API rather than the web client.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
