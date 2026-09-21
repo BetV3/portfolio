@@ -673,6 +673,11 @@ export const projects: Project[] = [
           "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo -- no DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
+        image: "/diagram-k8s-environments.d5356cc8.svg",
+        imageAlt:
+          "Three Kubernetes clusters: dev with six nodes, staging with three and a single etcd member, production with six and three etcd members. Each has a kube-vip virtual IP in front of its API. All three share one VLAN.",
+        imageCaption:
+          "Node, pod and etcd fsync figures read from the clusters at render time.",
       },
       {
         heading: "The failover test that first gave a false pass",
@@ -760,6 +765,11 @@ export const projects: Project[] = [
           "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals -- including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
+        image: "/diagram-observability.c7e27967.svg",
+        imageAlt:
+          "Scrape targets feed vmagent, which writes to VictoriaMetrics and is read by Grafana. The watchdog runs entirely separately and is the only path to an alert. No line connects the two systems.",
+        imageCaption:
+          "Target and signal counts read live. The gap between the two halves is the design.",
       },
     ],
   },
@@ -792,6 +802,11 @@ export const projects: Project[] = [
           "Traffic reaches Cloudflare, travels down an outbound-only tunnel to a connector running on a production control-plane node, and lands on the cluster's ingress controller at a pinned node port. Nothing listens on the public internet and no router rule was changed.",
           "I created a separate tunnel rather than extending the existing one, so it has its own credentials and its own failure domain and can be deleted without touching anything already working.",
         ],
+        image: "/diagram-public-edge.4e943747.svg",
+        imageAlt:
+          "A visitor reaches Cloudflare, which terminates TLS. Inside the cluster a cloudflared connector dials outward to Cloudflare over QUIC. Traffic then reaches ingress-nginx on a NodePort. The home firewall forwards no ports.",
+        imageCaption:
+          "The arrow out of the cluster is the whole point: nothing dials in.",
       },
       {
         heading: "Migrating a live job-hunt asset carefully",
