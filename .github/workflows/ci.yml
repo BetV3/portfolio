@@ -1,0 +1,114 @@
+name: CI
+
+# Cloudflare Workers Builds owns DEPLOYMENT (git integration on the repo,
+# `assets.directory: ./out` in wrangler.jsonc). This workflow deliberately
+# does NOT deploy -- two deploy paths racing each other is how you get a
+# site that disagrees with itself. CI's job is to fail a PR *before* the
+# Cloudflare build fails, so a broken push shows up as a red check rather
+# than a broken site.
+#
+# History: .github was deleted 2026-08-17 in the same commit that added
+# wrangler.jsonc, during the AWS -> Cloudflare migration. The old deploy.yml
+# pushed to S3 and invalidated CloudFront; that path is dead and is NOT
+# restored here. Only the CI half comes back, plus two checks specific to
+# how this repo actually breaks.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Type check
+        run: npx tsc --noEmit -p tsconfig.json
+
+      - name: Build
+        run: npm run build
+
+      # ---- repo-specific check 1: no fabricated or placeholder claims ----
+      # This site's standard is that every claim must be defensible in an
+      # interview. Template placeholders (USERNAME/REPO, XX.X%, example.com)
+      # shipping to production is the exact failure this enforces against.
+      # Also catches __TOKEN__ style markers from data-generation scripts
+      # that did not substitute.
+      - name: No placeholder or fabricated content
+        run: |
+          set -uo pipefail
+          PATTERN='USERNAME/REPO|example\.com|XX\.X|X M\+|< X ms|PLACEHOLDER|__[A-Z][A-Z0-9_]+__|[Cc]oming soon|TODO: replace|lorem ipsum'
+          if grep -rInE "$PATTERN" \
+               --include='*.ts' --include='*.tsx' --include='*.md' \
+               --include='*.mdx' --include='*.json' \
+               src content 2>/dev/null; then
+            echo
+            echo "::error::Placeholder or template content found above."
+            echo "Every claim on this site must be backed by a re-runnable source."
+            exit 1
+          fi
+          echo "No placeholder content found."
+
+      # ---- repo-specific check 2: pages must RENDER, not merely build ----
+      # A Next.js static export happily emits a page whose body is empty.
+      # `next build` passing proves the bundle compiled, not that a visitor
+      # sees anything. Assert every exported project page carries real prose.
+      #
+      # NOTE the path shape: `trailingSlash: true` means pages land at
+      # out/projects/<slug>/index.html, NOT out/projects/<slug>.html.
+      # (A verification script in this repo's history checked the wrong one
+      # and reported every page as missing.)
+      - name: Project pages render real content
+        run: |
+          set -uo pipefail
+          FAIL=0
+          COUNT=0
+          for d in out/projects/*/; do
+            slug=$(basename "$d")
+            f="$d/index.html"
+            [ -f "$f" ] || { echo "MISSING: $slug/index.html"; FAIL=1; continue; }
+            words=$(sed 's/<[^>]*>/ /g' "$f" | tr -s ' \n' ' ' | wc -w)
+            COUNT=$((COUNT+1))
+            if [ "$words" -lt 150 ]; then
+              echo "THIN ($words words): $slug"
+              FAIL=1
+            else
+              echo "ok ($words words): $slug"
+            fi
+          done
+          if [ "$COUNT" -lt 3 ]; then
+            echo "::error::Only $COUNT project pages exported - expected the full set."
+            exit 1
+          fi
+          [ "$FAIL" = 0 ] || { echo "::error::One or more project pages are missing or thin."; exit 1; }
+          echo "All $COUNT project pages carry real content."
+
+      # ---- the artifact Cloudflare will publish ----
+      - name: Check the export is publishable
+        run: |
+          set -uo pipefail
+          test -f out/index.html || { echo "::error::out/index.html missing"; exit 1; }
+          echo "export size: $(du -sh out | cut -f1), $(find out -name '*.html' | wc -l) html files"

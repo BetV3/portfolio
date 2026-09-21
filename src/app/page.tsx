@@ -105,7 +105,7 @@ export default function Home() {
               Flagship work demonstrating system design and engineering depth.
             </p>
           </div>
-          <a
+          <Link
             href="/projects"
             className="hidden sm:inline-flex items-center text-sm font-medium text-accent hover:text-accent-muted transition-colors"
           >
@@ -123,7 +123,7 @@ export default function Home() {
                 d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
               />
             </svg>
-          </a>
+          </Link>
         </div>
 
         <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -143,7 +143,7 @@ export default function Home() {
         </div>
 
         <div className="mt-8 sm:hidden">
-          <a
+          <Link
             href="/projects"
             className="inline-flex items-center text-sm font-medium text-accent hover:text-accent-muted transition-colors"
           >
@@ -161,7 +161,7 @@ export default function Home() {
                 d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3"
               />
             </svg>
-          </a>
+          </Link>
         </div>
       </section>
 
