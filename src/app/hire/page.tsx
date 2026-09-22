@@ -66,9 +66,9 @@ export default function HirePage() {
         </h1>
         <p className="mt-6 text-lg leading-8 text-muted-foreground">
           I build and operate the unglamorous layer: clusters, monitoring,
-          backups, and the pipelines that ship code. I am taking on part-time
-          contract and retainer work alongside full-time employment, which
-          means evenings, weekends, and a realistic 10 to 15 hours a week.
+          backups, and the pipelines that ship code. I take on part-time
+          contract and retainer work, around 10 to 15 hours a week, on
+          projects where that focus is worth more than a full-time seat.
         </p>
         <p className="mt-4 text-lg leading-8 text-muted-foreground">
           Everything below links to the actual code or the actual incident
@@ -146,31 +146,29 @@ export default function HirePage() {
 
       <section className="mb-14">
         <h2 className="mb-4 text-xl font-semibold text-foreground">
-          Where I am honest about limits
+          How I work
         </h2>
         <ul className="space-y-3 text-muted-foreground">
           <li className="flex gap-3">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
             <span>
-              I graduated in 2025 and most of my depth comes from systems I
-              built and operate myself, not from years on a platform team. The
-              infrastructure is real and running; the professional track record
-              is short.
+              Strongest on Linux, Kubernetes, and AWS with Terraform. That is
+              where I have built the most and where I will move fastest for
+              you.
             </span>
           </li>
           <li className="flex gap-3">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
             <span>
-              My cloud work is AWS with Terraform. If you need deep GCP or
-              Azure, I am not your best option.
+              I hand over work you can run without me: the scripts, the
+              runbook, and the checks that tell you when something breaks.
             </span>
           </li>
           <li className="flex gap-3">
             <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
             <span>
-              I work part-time around a full-time job. If you need someone
-              during business hours or on call, that is a poor fit and I would
-              rather say so now.
+              Scheduled work in evenings and weekends, US Central, with a
+              standing weekly check-in so you always know where things stand.
             </span>
           </li>
         </ul>
@@ -179,9 +177,9 @@ export default function HirePage() {
       <section className="rounded-2xl border border-border bg-card/50 p-6 sm:p-8">
         <h2 className="text-xl font-semibold text-foreground">Start a conversation</h2>
         <p className="mt-3 leading-relaxed text-muted-foreground">
-          Tell me what is broken or what you are trying to stand up. If I am
-          not the right person I will say so, and where I can I will point you
-          at someone or something that is.
+          Tell me what is broken or what you are trying to stand up, and I
+          will tell you how I would approach it and what it would take. No
+          pitch deck, no discovery process.
         </p>
         <div className="mt-6 flex flex-wrap gap-4">
           <a
