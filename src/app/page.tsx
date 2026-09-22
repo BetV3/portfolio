@@ -63,6 +63,12 @@ export default function Home() {
               </svg>
             </a>
             <a
+              href="/hire"
+              className="inline-flex items-center justify-center rounded-full border border-accent/60 px-6 py-3 text-sm font-semibold text-accent transition-all hover:bg-accent hover:text-white"
+            >
+              Contract work
+            </a>
+            <a
               href="https://github.com/BetV3"
               target="_blank"
               rel="noopener noreferrer"
@@ -326,7 +332,7 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Entry-level backend, platform, or infrastructure roles
+                  Backend, platform, or infrastructure roles
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
@@ -350,7 +356,7 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Bringing up three Talos Kubernetes clusters on vSphere
+                  Operating three Kubernetes environments on vSphere, dev through production
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
