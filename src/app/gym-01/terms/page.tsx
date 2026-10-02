@@ -1,12 +1,12 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "gym-01 | Terms of Use",
+  title: "Rack Rank | Terms of Use",
   description:
-    "Terms of use for gym-01, an iOS workout tracker with per-gym leaderboards. Zero tolerance for objectionable content or abusive users.",
+    "Terms of use for Rack Rank, an iOS workout tracker with per-gym leaderboards. Zero tolerance for objectionable content or abusive users.",
 };
 
-const EFFECTIVE = "October 1, 2026";
+const EFFECTIVE = "October 2, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -34,15 +34,15 @@ export default function Gym01TermsPage() {
     <div className="mx-auto max-w-3xl px-6 py-16 lg:px-8 lg:py-24">
       <div className="mb-12">
         <h1 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
-          gym-01 Terms of Use
+          Rack Rank Terms of Use
         </h1>
         <p className="mt-2 text-muted-foreground">Effective {EFFECTIVE}</p>
       </div>
 
       <Section title="Agreement">
         <p>
-          gym-01 (working title) is an iOS workout tracker with a leaderboard for each gym, made
-          by Elvis Ramirez. By tapping Agree in the app, you accept these terms and Apple&apos;s{" "}
+          Rack Rank is an iOS workout tracker with a leaderboard for each gym, made by Elvis
+          Ramirez. By tapping Agree in the app, you accept these terms and Apple&apos;s{" "}
           <A href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">
             Licensed Application End User License Agreement
           </A>
@@ -74,10 +74,13 @@ export default function Gym01TermsPage() {
             I review reports and act within 24 hours: offending usernames, lift records and
             confirmations are removed, and the user who posted them is removed from the boards.
           </li>
-          <li>Repeat offenders are permanently blocked from the boards.</li>
+          <li>
+            Repeat offenders are removed from the boards for good, and their usernames are never
+            released.
+          </li>
           <li>
             You can also block any member yourself. Blocking hides them from your boards
-            immediately.
+            immediately and also sends me a report.
           </li>
         </ul>
       </Section>
