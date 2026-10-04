@@ -50,7 +50,7 @@ export default function Gym01SupportPage() {
 
       <Section title="Report a user or a lift">
         <ul className="list-disc pl-5 space-y-2">
-          <li>In the app, tap a username or lift on a board and choose Report.</li>
+          <li>In the app, tap another member&apos;s row on a board and choose Report.</li>
           <li>For anything else, use Settings &gt; Safety &gt; Report a user or problem.</li>
           <li>If you cannot use the app, email me the gym and the username.</li>
         </ul>
@@ -58,10 +58,18 @@ export default function Gym01SupportPage() {
 
       <Section title="Hide or delete your data">
         <ul className="list-disc pl-5 space-y-2">
-          <li>Settings &gt; Hide me from boards removes your public check-ins and lifts.</li>
+          <li>
+            Settings &gt; Hide me from boards (or the menu on the Boards screen) removes your public
+            check-ins, lifts and witness confirmations. Your username stays reserved.
+          </li>
           <li>
             Settings &gt; Delete all my data removes your public records and everything the app
-            stores on your phone.
+            stores on your phone. Reports you sent are kept until I have handled them.
+          </li>
+          <li>
+            Fix a typo in a finished workout: open it in History and tap Edit. If the best set of a
+            lift changes, its old board record is removed and the corrected one is published if it is
+            still the same day at your gym.
           </li>
           <li>
             Deleted the app already? Email me and I will delete your public records.

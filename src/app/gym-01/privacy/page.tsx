@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Privacy policy for Rack Rank, an iOS workout tracker with per-gym leaderboards. What is public, what stays on your phone, and how to delete it.",
 };
 
-const EFFECTIVE = "October 2, 2026";
+const EFFECTIVE = "October 3, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -45,10 +45,13 @@ export default function Gym01PrivacyPage() {
           Ramirez. This policy covers the app and its TestFlight beta.
         </p>
         <ul className="list-disc pl-5 space-y-2 text-foreground">
-          <li>Your workouts, sets and body measurements stay on your phone.</li>
+          <li>
+            Your workout history and body measurements stay on your phone, except the leaderboard
+            records described below.
+          </li>
           <li>
             If you join a gym&apos;s boards, your username, your gym, the days you checked in, your
-            bench, squat and deadlift bests, and any lifts you confirm for others are stored in a
+            bench, squat and deadlift records, and any lifts you confirm for others are stored in a
             public database that anyone using the app can read.
           </li>
           <li>
@@ -61,9 +64,11 @@ export default function Gym01PrivacyPage() {
 
       <Section title="What stays on your phone">
         <p>
-          Workouts, sets, reps, routines, personal records, notes, bodyweight and waist
-          measurements, and the exact times you checked in. None of this is sent to me or to
-          anyone else. It is deleted when you delete the app or use Delete all my data.
+          Workouts, sets, reps, routines, personal records, bodyweight and waist measurements, your
+          gym&apos;s map coordinates, the members you blocked, and the exact times you checked in.
+          None of this is sent to me or to anyone else, except the check-in days and the bench,
+          squat and deadlift sets listed under What is public. It is deleted when you delete the app
+          or use Delete all my data.
         </p>
       </Section>
 
@@ -75,27 +80,35 @@ export default function Gym01PrivacyPage() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             <span className="text-foreground">Your profile:</span> your username, the gym you
-            picked, whether you are hidden from the boards, and the date and time you joined. A
-            separate record reserves your username at that gym.
+            picked, whether you are hidden from the boards, and the date and time you joined that
+            gym. iCloud also stamps it with the time it was last changed, for example when you rename
+            yourself or hide. A separate record reserves your username at that gym.
           </li>
           <li>
             <span className="text-foreground">Check-in days:</span> the calendar days you checked
-            in at your gym. The record has no time field, but it is saved when your workout ends,
-            and iCloud stamps every record with the time it was saved, so that stamp shows when
-            your first checked-in workout of the day ended.
+            in at your gym. The record has no time field, but it is saved when your workout ends (or
+            the next time you open the app, if the phone was offline), and iCloud stamps every record
+            with the time it was saved, so that stamp shows roughly when your first checked-in workout
+            of the day ended. If the day at your gym is already over by then, nothing is published
+            for that workout.
           </li>
           <li>
-            <span className="text-foreground">Lift records:</span> each time a checked-in workout
-            beats your best bench press, squat or deadlift already published at this gym, a new
-            record with the weight, reps, estimated one-rep max and the day (not the time) of the
-            set. They are saved when your workout ends. Earlier records stay until you hide or
-            delete your data.
+            <span className="text-foreground">Lift records:</span> when a checked-in workout
+            includes a barbell bench press, squat or deadlift, the app publishes your best set of
+            that lift (only ticked sets count, and warm-ups and sets over 12 reps do not) with its
+            weight, reps, estimated one-rep max and the day (not the time). It is published only if
+            it beats your best record of that lift already published at this gym, or equals it on a
+            different day. Records are saved when your workout ends, or the next time you open the
+            app if the phone was offline. Earlier records stay until you delete or edit that workout
+            in History, hide from the boards, or delete your data.
           </li>
           <li>
             <span className="text-foreground">Witness confirmations:</span> when you tap &quot;I
             saw it&quot; for someone&apos;s lift, which lift you confirmed, your gym, and the exact
             time you tapped, linked to your username. The app only offers this to members who
-            checked in at that gym that day, so it shows you were there that day.
+            checked in at that gym that day before the lift was saved, so it shows you were there
+            that day. If the lifter later changes that lift, your confirmation does not carry over to
+            the changed lift.
           </li>
         </ul>
         <p>
@@ -108,16 +121,18 @@ export default function Gym01PrivacyPage() {
       <Section title="Location">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            The app reads your location only while it is open, and only when you start a workout,
-            tap Check In, or tap Find gyms near me. Check-in needs Precise Location on; with it
-            off, check-in says so and workout logging still works.
+            The app reads your location only while it is open, and only when you start a workout or
+            reopen one that is not checked in yet (up to 30 minutes after it started), tap Check in,
+            or tap Find gyms near me. If you have not picked a gym, workouts never read your
+            location. Check-in needs Precise Location on; with it off, check-in says so and workout
+            logging still works.
           </li>
           <li>
             The check-in comparison happens on your phone, and your coordinates are never stored
             or published. Find gyms near me sends your location to Apple Maps to list gyms within
             about 5 km, and gym name searches go to Apple Maps too. Your gym is identified by its
-            Apple Maps ID. If Apple Maps has no ID for it, the app uses the gym&apos;s coordinates
-            rounded to about 100 meters, and that rounded location is part of your public records.
+            Apple Maps ID. A gym that Apple Maps has no ID for cannot be picked, so no coordinates
+            are ever part of your public records.
           </li>
           <li>The app never uses background location and never shows anyone where you are now.</li>
           <li>You can turn location off in Settings &gt; Rack Rank. Workout logging still works.</li>
@@ -136,11 +151,19 @@ export default function Gym01PrivacyPage() {
       <Section title="Hiding and deleting your data">
         <ul className="list-disc pl-5 space-y-2">
           <li>
-            <span className="text-foreground">Hide me from boards</span> (Settings) deletes your
+            <span className="text-foreground">Hide me from boards</span> (in Settings, or in the
+            menu on the Boards screen) deletes your
             published check-in days, lift records and witness confirmations, and stops publishing
             new ones. Your profile record (username, gym and join date) stays in the public
             database marked as hidden, and your username stays reserved. Your workout history on
-            your phone is not affected.
+            your phone is not affected. Turning it off again does not bring back deleted records.
+          </li>
+          <li>
+            <span className="text-foreground">Deleting a workout</span> in History removes the
+            lift records it published; the check-in day stays.{" "}
+            <span className="text-foreground">Editing a finished workout</span> changes its lift
+            records only if the best set of a lift changed: the old record is removed, and the
+            corrected one is published if it is still the same day at your gym.
           </li>
           <li>
             <span className="text-foreground">Delete all my data</span> (Settings) deletes your
@@ -149,8 +172,9 @@ export default function Gym01PrivacyPage() {
             including those sent when you blocked someone, are kept until I have handled them.
           </li>
           <li>
-            If you no longer have the app, email me from the address below and I will delete your
-            public records.
+            If you no longer have the app, changed gyms and the app said it could not clean up your
+            old gym, or switched this phone to a different Apple Account, email me from the address
+            below and I will delete the public records left behind.
           </li>
         </ul>
       </Section>
