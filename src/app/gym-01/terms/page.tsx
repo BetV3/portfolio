@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Terms of use for Rack Rank, an iOS workout tracker with per-gym leaderboards. Zero tolerance for objectionable content or abusive users.",
 };
 
-const EFFECTIVE = "October 2, 2026";
+const EFFECTIVE = "October 3, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -46,7 +46,8 @@ export default function Gym01TermsPage() {
           <A href="https://www.apple.com/legal/internet-services/itunes/dev/stdeula/">
             Licensed Application End User License Agreement
           </A>
-          . If you do not agree, do not create a username. You can still log workouts privately.
+          . If you do not agree, tap Not now and do not create a username. You can still log
+          workouts privately.
         </p>
       </Section>
 
@@ -69,14 +70,17 @@ export default function Gym01TermsPage() {
 
       <Section title="Reports and enforcement">
         <ul className="list-disc pl-5 space-y-2">
-          <li>Every username and lift on a board has a Report button.</li>
+          <li>
+            You can report any other member&apos;s username or lift: tap their row on a board and
+            choose Report. You can also use Settings &gt; Safety &gt; Report a user or problem.
+          </li>
           <li>
             I review reports and act within 24 hours: offending usernames, lift records and
             confirmations are removed, and the user who posted them is removed from the boards.
           </li>
           <li>
-            Repeat offenders are removed from the boards for good, and their usernames are never
-            released.
+            Repeat offenders have everything they post removed each time, and I may reserve their
+            usernames so no one can use them again.
           </li>
           <li>
             You can also block any member yourself. Blocking hides them from your boards
@@ -96,8 +100,8 @@ export default function Gym01TermsPage() {
 
       <Section title="Leaderboards">
         <p>
-          Boards are self-reported. Check-ins only show that a phone was near the gym when a
-          workout started, and witness confirmations come from other members. Rankings are for
+          Boards are self-reported. Check-ins only show that a phone was within about 150 meters of
+          the gym around the start of a workout, and witness confirmations come from other members. Rankings are for
           fun, are not verified records, and may be reset or corrected at any time.
         </p>
       </Section>
@@ -118,8 +122,7 @@ export default function Gym01TermsPage() {
 
       <Section title="Changes">
         <p>
-          If these terms change, I will update this page and the effective date at the top, and
-          the app will ask you to agree again before you use the boards.
+          If these terms change, I will update this page and the effective date at the top.
         </p>
       </Section>
 
