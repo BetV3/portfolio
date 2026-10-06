@@ -64,7 +64,13 @@ export default function Gym01SupportPage() {
           </li>
           <li>
             Settings &gt; Delete all my data removes your public records and everything the app
-            stores on your phone. Reports you sent are kept until I have handled them.
+            stores on your phone. If iCloud is signed out, it erases your phone&apos;s data but
+            keeps your username and gym: sign back in and run it again to remove your public
+            records. Reports you sent are kept until I have handled them.
+          </li>
+          <li>
+            Changing your gym in Settings deletes your check-ins, lifts and witness confirmations
+            at the old gym and frees your username there.
           </li>
           <li>
             Fix a typo in a finished workout: open it in History and tap Edit. If the best set of a
@@ -75,6 +81,15 @@ export default function Gym01SupportPage() {
             Deleted the app already? Email me and I will delete your public records.
           </li>
         </ul>
+      </Section>
+
+      <Section title="Copy for AI">
+        <p>
+          Tap Copy for AI on the workout summary, on a workout in History, or in History &gt;
+          Progress Charts for the last 4 weeks, then tap Copy or Share and paste it into ChatGPT,
+          Claude or another AI app. The text leaves out your gym, username and check-ins. See the
+          Privacy Policy for exactly what it contains.
+        </p>
       </Section>
 
       <Section title="Policies">

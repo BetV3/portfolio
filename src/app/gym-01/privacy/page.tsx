@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Privacy policy for Rack Rank, an iOS workout tracker with per-gym leaderboards. What is public, what stays on your phone, and how to delete it.",
 };
 
-const EFFECTIVE = "October 3, 2026";
+const EFFECTIVE = "October 6, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -47,7 +47,7 @@ export default function Gym01PrivacyPage() {
         <ul className="list-disc pl-5 space-y-2 text-foreground">
           <li>
             Your workout history and body measurements stay on your phone, except the leaderboard
-            records described below.
+            records described below and anything you choose to copy or share yourself.
           </li>
           <li>
             If you join a gym&apos;s boards, your username, your gym, the days you checked in, your
@@ -67,8 +67,10 @@ export default function Gym01PrivacyPage() {
           Workouts, sets, reps, routines, personal records, bodyweight and waist measurements, your
           gym&apos;s map coordinates, the members you blocked, and the exact times you checked in.
           None of this is sent to me or to anyone else, except the check-in days and the bench,
-          squat and deadlift sets listed under What is public. It is deleted when you delete the app
-          or use Delete all my data.
+          squat and deadlift sets listed under What is public, and anything you copy or share
+          yourself (see Copy for AI and exports). It is deleted when you delete the app or use
+          Delete all my data. If iCloud is signed out when you use Delete all my data, your
+          username, your gym and its map coordinates stay on the phone until you run it again.
         </p>
       </Section>
 
@@ -99,8 +101,9 @@ export default function Gym01PrivacyPage() {
             weight, reps, estimated one-rep max and the day (not the time). It is published only if
             it beats your best record of that lift already published at this gym, or equals it on a
             different day. Records are saved when your workout ends, or the next time you open the
-            app if the phone was offline. Earlier records stay until you delete or edit that workout
-            in History, hide from the boards, or delete your data.
+            app if the phone was offline. Earlier records stay until you delete that workout in
+            History, edit it so the best set of that lift changes, hide from the boards, change gyms,
+            or delete your data.
           </li>
           <li>
             <span className="text-foreground">Witness confirmations:</span> when you tap &quot;I
@@ -162,14 +165,28 @@ export default function Gym01PrivacyPage() {
             <span className="text-foreground">Deleting a workout</span> in History removes the
             lift records it published; the check-in day stays.{" "}
             <span className="text-foreground">Editing a finished workout</span> changes its lift
-            records only if the best set of a lift changed: the old record is removed, and the
-            corrected one is published if it is still the same day at your gym.
+            records only if the best set of a lift changed: when you tap Done, the old record is
+            removed, and the corrected one is published if you made the edit on the same day at your
+            gym and it passes the rule above. If the phone is offline, the corrected record is saved
+            the next time you open the app, even if that day has ended by then.
+          </li>
+          <li>
+            <span className="text-foreground">Changing your gym</span> (Settings &gt; Gym) deletes
+            your check-in days, lift records, witness confirmations and profile at the old gym, and
+            frees your username there. If part of that cleanup fails, the app retries it each time
+            you open it.
           </li>
           <li>
             <span className="text-foreground">Delete all my data</span> (Settings) deletes your
             profile, username reservation, check-in days, lift records and witness confirmations,
-            frees your username, and erases the app&apos;s data on your phone. Reports you filed,
-            including those sent when you blocked someone, are kept until I have handled them.
+            frees your username, and erases the app&apos;s data on your phone. If a public record at
+            your gym cannot be removed, nothing is erased and the app asks you to try again. If
+            iCloud is signed out or unavailable, it erases your workouts and other data on your
+            phone but keeps your username and gym, so you can sign back in and run it again to
+            remove your public records. If records at a gym you left earlier cannot be removed yet,
+            your phone&apos;s data is still erased and the app keeps retrying that cleanup each time
+            you open it. Reports you filed, including those sent when you blocked someone, are kept
+            until I have handled them.
           </li>
           <li>
             If you no longer have the app, changed gyms and the app said it could not clean up your
@@ -179,11 +196,28 @@ export default function Gym01PrivacyPage() {
         </ul>
       </Section>
 
+      <Section title="Copy for AI and exports">
+        <p>
+          Copy for AI (on the workout summary, on a workout in History, and in History &gt; Progress
+          Charts for the last 4 weeks) builds a plain-text summary of your workouts that you can
+          paste into ChatGPT, Claude or another AI app. You see the full text first, and nothing
+          leaves your phone until you tap Copy or Share. The text contains workout dates (not
+          times), routine names, how long each workout took, each exercise with its ticked sets
+          (weight and reps), warm-ups and personal records, your best sets with estimated one-rep
+          maxes, and working sets per muscle per week. It leaves out your gym, your username, your
+          check-ins, other members, and your bodyweight and waist measurements. Copy puts the text
+          on your clipboard, where iOS can also offer it to your other Apple devices through
+          Universal Clipboard. Once you paste or share it, the app you chose handles it under its
+          own privacy policy. I never receive it.
+        </p>
+      </Section>
+
       <Section title="What I collect">
         <p>
           Nothing beyond the leaderboard records and reports above. Gym searches go to Apple Maps
           under Apple&apos;s privacy policy. The app has no analytics, advertising, tracking or
-          third-party code, and does not sell or share data with anyone.
+          third-party code, and does not sell or share data with anyone. Copy for AI and exports
+          only hand your text to the app you pick, when you tap; I never receive it.
         </p>
       </Section>
 

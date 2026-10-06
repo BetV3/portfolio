@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Terms of use for Rack Rank, an iOS workout tracker with per-gym leaderboards. Zero tolerance for objectionable content or abusive users.",
 };
 
-const EFFECTIVE = "October 3, 2026";
+const EFFECTIVE = "October 6, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -91,7 +91,8 @@ export default function Gym01TermsPage() {
 
       <Section title="Lift safely">
         <p>
-          The app tracks what you log. It is not medical, training or nutrition advice. Heavy
+          The app tracks what you log. It is not medical, training or nutrition advice, and
+          neither are suggestions from an AI app you paste your workouts into. Heavy
           lifting can cause injury: use a spotter and safety equipment, and never attempt a lift
           for a leaderboard spot that you are not ready for. You are responsible for your own
           training.
