@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Terms of use for Rack Rank, an iOS workout tracker with per-gym leaderboards. Zero tolerance for objectionable content or abusive users.",
 };
 
-const EFFECTIVE = "October 6, 2026";
+const EFFECTIVE = "October 7, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -83,8 +83,10 @@ export default function Gym01TermsPage() {
             usernames so no one can use them again.
           </li>
           <li>
-            You can also block any member yourself. Blocking hides them from your boards
-            immediately and also sends me a report.
+            You can also block any member yourself: tap their row on a board and choose Block, or use
+            Settings &gt; Safety &gt; Block a member. Blocking hides them from your boards (pull down
+            on Boards to refresh) and also sends me a report. You can unblock someone in Settings &gt;
+            Privacy &gt; Blocked users.
           </li>
         </ul>
       </Section>

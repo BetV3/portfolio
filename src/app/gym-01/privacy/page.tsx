@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Privacy policy for Rack Rank, an iOS workout tracker with per-gym leaderboards. What is public, what stays on your phone, and how to delete it.",
 };
 
-const EFFECTIVE = "October 6, 2026";
+const EFFECTIVE = "October 7, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -92,7 +92,8 @@ export default function Gym01PrivacyPage() {
             the next time you open the app, if the phone was offline), and iCloud stamps every record
             with the time it was saved, so that stamp shows roughly when your first checked-in workout
             of the day ended. If the day at your gym is already over by then, nothing is published
-            for that workout.
+            for that workout, except a lift you corrected in History that same day while the phone
+            was offline (see Hiding and deleting your data).
           </li>
           <li>
             <span className="text-foreground">Lift records:</span> when a checked-in workout
@@ -111,7 +112,8 @@ export default function Gym01PrivacyPage() {
             time you tapped, linked to your username. The app only offers this to members who
             checked in at that gym that day before the lift was saved, so it shows you were there
             that day. If the lifter later changes that lift, your confirmation does not carry over to
-            the changed lift.
+            the changed lift, except in rare cases where the lifter hid from the boards and turned it
+            back on the same day.
           </li>
         </ul>
         <p>
@@ -198,17 +200,17 @@ export default function Gym01PrivacyPage() {
 
       <Section title="Copy for AI and exports">
         <p>
-          Copy for AI (on the workout summary, on a workout in History, and in History &gt; Progress
-          Charts for the last 4 weeks) builds a plain-text summary of your workouts that you can
-          paste into ChatGPT, Claude or another AI app. You see the full text first, and nothing
-          leaves your phone until you tap Copy or Share. The text contains workout dates (not
-          times), routine names, how long each workout took, each exercise with its ticked sets
-          (weight and reps), warm-ups and personal records, your best sets with estimated one-rep
-          maxes, and working sets per muscle per week. It leaves out your gym, your username, your
-          check-ins, other members, and your bodyweight and waist measurements. Copy puts the text
-          on your clipboard, where iOS can also offer it to your other Apple devices through
-          Universal Clipboard. Once you paste or share it, the app you chose handles it under its
-          own privacy policy. I never receive it.
+          Copy for AI (on the workout summary, on a workout in History, and for the last 4 weeks in
+          History &gt; Insights or History &gt; Progress Charts) builds a plain-text summary of your
+          workouts that you can paste into ChatGPT, Claude or another AI app. You see the full text
+          first, and nothing leaves your phone until you tap Copy or Share. The text contains
+          workout dates (not times), routine names, how long each workout took, each exercise with
+          its ticked sets (weight and reps), warm-ups and personal records, your best sets with
+          estimated one-rep maxes, working sets per muscle per week, and workouts per week. It
+          leaves out your gym, your username, your check-ins, other members, and your bodyweight and
+          waist measurements. The Copy button puts the text on this phone&apos;s clipboard only, not
+          on your other Apple devices, and it is cleared after 10 minutes. Once you paste or share
+          it, the app you chose handles it under its own privacy policy. I never receive it.
         </p>
       </Section>
 
