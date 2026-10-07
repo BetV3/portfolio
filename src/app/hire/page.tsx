@@ -19,7 +19,7 @@ const services = [
       { label: "Provisioning scripts", href: "https://github.com/BetV3/Homelab_Scripts/tree/main/vsphere" },
     ],
     evidence:
-      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync p99 measured between 9.6 and 13.4 ms across the three clusters (7 October 2026) against a 25 ms budget.",
+      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync p99 measured between 8.0 and 12.8 ms across the three clusters (7 October 2026) against a 25 ms budget.",
   },
   {
     title: "Monitoring that catches real failures",
@@ -82,14 +82,14 @@ export default function HirePage() {
         <dl className="mt-6 grid gap-6 sm:grid-cols-3">
           <div>
             <dt className="text-sm font-medium text-muted-foreground">Rate</dt>
-            <dd className="mt-1 text-2xl font-bold text-foreground">$65&ndash;85/hr</dd>
+            <dd className="mt-1 text-2xl font-bold text-foreground">$65 to 85/hr</dd>
             <dd className="mt-1 text-sm text-muted-foreground">
               Depends on scope and urgency
             </dd>
           </div>
           <div>
             <dt className="text-sm font-medium text-muted-foreground">Availability</dt>
-            <dd className="mt-1 text-2xl font-bold text-foreground">10&ndash;15 hrs/wk</dd>
+            <dd className="mt-1 text-2xl font-bold text-foreground">10 to 15 hrs/wk</dd>
             <dd className="mt-1 text-sm text-muted-foreground">
               Evenings and weekends, US Central
             </dd>

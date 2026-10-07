@@ -232,7 +232,7 @@ export const projects: Project[] = [
       {
         heading: "Four ways the same failure showed up",
         body: [
-          "The cron job jobs-worker was scheduled every five minutes on weekdays. It failed 970 consecutive times over four days. An alert fired on the first failure and then never again, because the job settled into a skipped state and stayed there. The reason nobody heard about failures 2 through 970 is that the alerting lived inside the same agent runtime as the job it was watching. When that runtime stopped doing useful work, it also stopped complaining.",
+          "A worker cron job was scheduled every five minutes on weekdays. It failed 970 consecutive times over four days. An alert fired on the first failure and then never again, because the job settled into a skipped state and stayed there. The reason nobody heard about failures 2 through 970 is that the alerting lived inside the same agent runtime as the job it was watching. When that runtime stopped doing useful work, it also stopped complaining.",
           "An observability plugin showed as enabled in the plugin list and was fully configured with credentials. It recorded nothing. The langfuse SDK was not present in the virtualenv, and the plugin failed open: missing import, no error, silent no-op. Working out why the install had not taken, I found that 3 of the 4 virtualenvs had no pip at all, because uv had created them. The install had failed as quietly as the plugin did.",
           "A keepalived health check ran dig against an internal name, and keepalived reads only the exit code. On the live boxes I measured what dig actually returns: exit 0 on NXDOMAIN, 0 on SERVFAIL, 0 on REFUSED. Only a dead port gave exit 9. So the check could detect that the DNS process was gone and literally nothing else. If the authoritative server died while the resolver stayed up, every internal name would come back NXDOMAIN, the check would still pass, and the virtual IP would stay parked on the broken node.",
           "The fourth one was in the watchdog itself. It posted alerts to a Discord webhook using Python's urllib. Discord sits behind Cloudflare, which rejects urllib's default User-Agent with error 1010 and an HTTP 403. curl worked, urllib did not. The watchdog ran on schedule, looked healthy, and delivered zero alerts. Setting an explicit User-Agent fixed it. I only caught it because I tested delivery instead of trusting that the send code had run.",
@@ -845,7 +845,7 @@ export const projects: Project[] = [
           "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
           "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
         ],
-        image: "/infrastructure-map.6eed3be0.svg",
+        image: "/infrastructure-map.ae158eda.svg",
         imageAlt:
           "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
         imageCaption:
@@ -893,7 +893,7 @@ export const projects: Project[] = [
     metrics: [
       { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
       { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
-      { label: "etcd fsync p99", value: "13.4 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "etcd fsync p99", value: "12.8 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/failover-test-that-proved-nothing" },
     ],
     sections: [
@@ -903,7 +903,7 @@ export const projects: Project[] = [
           "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo. No DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
-        image: "/diagram-k8s-environments.c1cd61d8.svg",
+        image: "/diagram-k8s-environments.d945309a.svg",
         imageAlt:
           "Three Kubernetes clusters: dev with six nodes, staging with three and a single etcd member, production with six and three etcd members. Each has a kube-vip virtual IP in front of its API. All three share one VLAN.",
         imageCaption:
@@ -914,7 +914,7 @@ export const projects: Project[] = [
         body: [
           "The obvious way to test a control-plane VIP is to stop the API server on whichever node holds it. I did that, the API recovered in about a second, and the test looked green.",
           "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was. The address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
-          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from 10.110.0.41 to 10.110.0.43 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions: zero holders is an outage, two or more is a split brain.",
+          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from control-plane node 1 to node 3 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions: zero holders is an outage, two or more is a split brain.",
         ],
       },
       {
@@ -996,7 +996,7 @@ export const projects: Project[] = [
         heading: "A metric that changed what I believed about the storage",
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
-          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 13.2 ms on dev and 13.4 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 12.5 ms on dev and 12.8 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
           "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },
@@ -1013,7 +1013,7 @@ export const projects: Project[] = [
           "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals, including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
-        image: "/diagram-observability.7b9d6fde.svg",
+        image: "/diagram-observability.a64d432c.svg",
         imageAlt:
           "Scrape targets feed vmagent, which writes to VictoriaMetrics and is read by Grafana. The watchdog runs entirely separately and is the only path to an alert. No line connects the two systems.",
         imageCaption:
@@ -1166,13 +1166,13 @@ export const projects: Project[] = [
         heading: "Two bugs that only running it found",
         body: [
           "The database URL in the config used the postgres:// scheme, and a grep for postgresql:// returned nothing, so the responder tried a local socket and failed quietly. And the watchdog's state file is pretty-printed JSON, while the reader parsed only its last line. Both are the shape every failure on this infrastructure takes: a component that reports success while doing nothing.",
-          "The runbook that restarts a container had never worked on any host. SSH joins its remote argv with spaces and the login shell re-parses the result, so a cd and a compose restart arrived as separate commands and compose ran in the home directory. It passed its validation tests for weeks because validation checked arguments, never execution. Fixed by quoting the whole payload once, and proven with a real restart with probes green afterwards.",
+          "The runbook that restarts a container had never worked on any host. SSH joins its remote argv with spaces and the login shell re-parses the result, so a cd and a compose restart arrived as two separate commands and compose ran in the home directory. It had passed its validation tests for weeks, because validation checked the arguments and never ran anything. I fixed it by quoting the whole payload once, then proved it with a real restart and watched the probes go green afterwards.",
         ],
       },
       {
         heading: "Honest status",
         body: [
-          "This responds to a personal fleet, and 187 of 189 incidents ended in report-only, which is the correct outcome for alerts with no safe automated fix. The number worth reading is not how much it fixed but that every tick and every decision is in a table I can query.",
+          "This responds to a personal fleet, and 187 of 189 incidents ended in report-only, which is the right outcome for alerts with no safe automated fix. I would not read the fix count as the result. The result is that every tick and every decision sits in a table I can query, so I can answer what it did and why.",
           "Still open: forced-command SSH keys so the server rejects anything off-list rather than only the Python layer, and an alert when the approval queue fills, because a full queue looks identical to an idle one.",
         ],
       },
@@ -1240,7 +1240,7 @@ export const projects: Project[] = [
         heading: "The first green run was wrong",
         body: [
           "The first run with a deliberately failing test failed, which looked like success. The log showed it had never run the test at all: the checkout action is a Node action and the Go image had no node binary. Had I stopped there I would have shipped a pipeline that fails everything regardless of correctness and called it working.",
-          "The proof came in two runs on the same pipeline: a correct tree passed, then the same tree with the test broken again failed. Clone with git directly, and never trust a red run you have not read.",
+          "The proof came in two runs on the same pipeline: a correct tree passed, then the same tree with the test broken again failed. The fix was to clone with git directly. The lesson I kept is to read every red run, because a failure for the wrong reason looks identical to a failure for the right one.",
         ],
       },
       {
@@ -1260,7 +1260,7 @@ export const projects: Project[] = [
       {
         heading: "Honest status",
         body: [
-          "This is a single-user forge on a home network. The claims are the controls and the tests that exercised them, not scale. The runner has full access to its Docker socket, which is root-equivalent on that VM; acceptable only because the VM holds nothing else, and stated here rather than hidden.",
+          "This is a single-user forge on a home network. What I am claiming is the controls and the tests that exercised them, not scale. The runner has full access to its Docker socket, which is root-equivalent on that VM. I accept that only because the VM holds nothing else, and I would rather say so here than leave it out.",
         ],
       },
     ],
@@ -1332,13 +1332,13 @@ export const projects: Project[] = [
         heading: "Two bugs I caused, and what found them",
         body: [
           "Fixing an earlier outage, I chowned the certificate directory so the container could read the key. The renewer runs as a different user and rewrites the certificate in place, so every renewal since had failed with permission denied. It was silent for about 17 hours because the certificate was still valid, and it was found with 6 hours 52 minutes to spare. The fix is a shared group with the renewer owning and the container reading; either single-owner answer breaks one side.",
-          "The renewer unit also restarted the service after every run. step ca renew exits zero when it decides nothing needs renewing, so an unconditional restart hook bounced the container every 15 minutes: 67 restarts in a day. Most fell between watchdog polls and the rest produced the random blips I had been seeing. Now a script hashes the certificate and restarts only on change, proven three times with an unchanged cert and once with a changed one. An exit code is not a change signal.",
+          "The renewer unit also restarted the service after every run. step ca renew exits zero when it decides nothing needs renewing, so an unconditional restart hook bounced the container every 15 minutes: 67 restarts in a day. Most fell between watchdog polls and the rest produced the random blips I had been seeing. Now a script hashes the certificate and restarts only when the hash changes, which I proved three times with an unchanged cert and once with a changed one. The thing I took away is that an exit code tells you a command succeeded, not that anything happened.",
         ],
       },
       {
         heading: "Why not the public CA I already pay for",
         body: [
-          "The public zone is on Cloudflare and Universal SSL already covers every public hostname. A public CA can only issue for names it can validate, and every internal service resolves only on the internal DNS and is deliberately unreachable from the internet. Making it work would mean exposing admin interfaces or running DNS validation for names that intentionally do not exist publicly. Internal is step-ca; public is Cloudflare. Different problems.",
+          "The public zone is on Cloudflare and Universal SSL already covers every public hostname. A public CA can only issue for names it can validate, and every internal service resolves only on the internal DNS and is deliberately unreachable from the internet. Making it work would mean exposing admin interfaces or running DNS validation for names that intentionally do not exist publicly. So the internal names get step-ca and the public ones stay on Cloudflare. They are different problems and I stopped trying to solve them with one tool.",
         ],
       },
       {
@@ -1415,7 +1415,7 @@ export const projects: Project[] = [
         heading: "The reaper bug, and testing it both ways",
         body: [
           "A task sat in running for two days. The reaper looked for status running and lease_expires_at earlier than now. The task's lease was NULL, because the worker died between claiming and its first heartbeat, and in SQL NULL compared to anything is NULL, not true. The task was permanently invisible to the one process meant to rescue it.",
-          "The fix adds a second clause: a NULL lease on a row not updated for an hour is treated as expired. The test creates a stale orphan and a fresh one and asserts the first is requeued and the second is left alone. A fix tested only in the direction that was broken can quietly break the other direction.",
+          "The fix adds a second clause: a NULL lease on a row not updated for an hour is treated as expired. The test creates a stale orphan and a fresh one and asserts the first is requeued and the second is left alone. I wrote the second half because a fix tested only in the direction that was broken can quietly break the other direction, and a reaper that eats live tasks is worse than one that misses stuck ones.",
           "Nothing had been calling the reaper at all. It now runs hourly under system cron. The first wrapper captured its output and printed only when non-empty, which made a working reaper look broken; it now always logs its outcome.",
         ],
       },
@@ -1423,14 +1423,14 @@ export const projects: Project[] = [
         heading: "A signal that mixed two owners",
         body: [
           "A queue-depth alert was red in 369 of 816 runs, 45 percent, and flapping. It was not wrong, it was ambiguous: it counted tasks older than six hours in both pending and approved, which merges nothing is claiming work (the system's fault, an incident) with the worker finished and is waiting on a human (my fault, a nudge).",
-          "Split into two signals with two thresholds: more than five unclaimed for six hours pages; more than five approvals ignored for a day nudges. A signal that mixes the system is broken with you have not replied yet trains you to ignore it.",
+          "I split it into two signals with two thresholds: more than five tasks unclaimed for six hours is an incident, and more than five approvals ignored for a day is a nudge. A signal that mixes the system is broken with you have not replied yet trains you to ignore it, and I had started to.",
         ],
       },
       {
         heading: "Approval gates and caps",
         body: [
           "A worker can park a task as needs_approval with a structured request attached. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire if nobody answers, and a count of expired tasks is itself a signal worth reading.",
-          "Caps live at claim time: a per-capability maximum on running tasks, and a maximum on parked tasks that blocks new claims but never blocks resuming an approved one. A workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
+          "Caps are enforced at claim time: a per-capability maximum on running tasks, and a maximum on parked tasks that blocks new claims but never blocks resuming an approved one. So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
         ],
       },
       {

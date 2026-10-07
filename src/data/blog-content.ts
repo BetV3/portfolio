@@ -136,7 +136,7 @@ export const blogContent: Record<string, ContentSection[]> = {
     {
       type: "code",
       language: "text",
-      content: "holder BEFORE: 10.110.0.41\nAPI through VIP: ok\nrecovered in ~0s\nholder AFTER : 10.110.0.41",
+      content: "holder BEFORE: cp-01\nAPI through VIP: ok\nrecovered in ~0s\nholder AFTER : cp-01",
     },
     {
       type: "paragraph",
@@ -167,7 +167,7 @@ export const blogContent: Record<string, ContentSection[]> = {
     {
       type: "code",
       language: "text",
-      content: "holder BEFORE: 10.110.0.41\nVIP MOVED to : 10.110.0.43  after ~3s\nAPI through VIP: ok\nfinal holders: 10.110.0.43 (count=1)",
+      content: "holder BEFORE: cp-01\nVIP MOVED to : cp-03  after ~3s\nAPI through VIP: ok\nfinal holders: cp-03 (count=1)",
     },
     {
       type: "paragraph",

@@ -147,15 +147,25 @@ jobs:
           FAIL=0
           while read -r u; do
             [ -z "$u" ] && continue
-            for attempt in 1 2 3; do
+            for attempt in 1 2 3 4 5; do
               code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" \
                        --max-time 20 -L "$u" || echo 000)
               case "$code" in
                 200) break ;;
-                429) sleep $((attempt * 10)) ;;
+                429) sleep $((attempt * 15)) ;;
                 *)   sleep 3 ;;
               esac
             done
+            # GitHub HTML is rate limited for anonymous clients; the raw host
+            # is not, so a blob URL that 429s is cross-checked there before
+            # being called dead. A dead file 404s on both.
+            if [ "$code" = 429 ] && printf '%s' "$u" | grep -qE '^https://github\.com/[^/]+/[^/]+/blob/'; then
+              raw=$(printf '%s' "$u" | sed -E 's#^https://github\.com/([^/]+)/([^/]+)/blob/#https://raw.githubusercontent.com/\1/\2/#')
+              code=$(curl -s -o /dev/null -w '%{http_code}' -A "$UA" --max-time 20 -L "$raw" || echo 000)
+              echo "  (429 on html, raw host says $code) $u"
+            fi
+            # a short pause between URLs keeps the whole run under the limit
+            sleep 2
             if [ "$code" = 200 ]; then
               echo "  ok   $u"
             else
@@ -188,8 +198,8 @@ jobs:
             '25\.8M|superseded 2026-10-07: 23.6M rows/hr'
             '\b82 (alert )?signals\b|superseded 2026-10-07: 109 watchdog signals'
             '"82"|superseded 2026-10-07: 109 watchdog signals'
-            '12\.74 ms|superseded 2026-10-07: etcd fsync p99 13.4 ms (prod, 1h window)'
-            '13\.63 ms|superseded 2026-10-07: etcd fsync p99 13.2 ms (dev, 1h window)'
+            '12\.74 ms|superseded 2026-10-07: etcd fsync p99 12.8 ms (prod, 1h window)'
+            '13\.63 ms|superseded 2026-10-07: etcd fsync p99 12.5 ms (dev, 1h window)'
             '\b97 signals\b|superseded 2026-10-07: 109 watchdog signals'
             '\b23 node_exporters\b|superseded 2026-10-07: 24 node_exporters'
             '"21"[^}]*probe|superseded 2026-10-07: 22 blackbox probes'
