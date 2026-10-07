@@ -48,10 +48,15 @@ export default function Gym01SupportPage() {
         </p>
       </Section>
 
-      <Section title="Report a user or a lift">
+      <Section title="Report or block a user">
         <ul className="list-disc pl-5 space-y-2">
           <li>In the app, tap another member&apos;s row on a board and choose Report.</li>
           <li>For anything else, use Settings &gt; Safety &gt; Report a user or problem.</li>
+          <li>
+            To block someone, tap their row on a board and choose Block, or use Settings &gt; Safety
+            &gt; Block a member. Blocking hides them from your boards (pull down on Boards to refresh)
+            and also sends me a report. Unblock them in Settings &gt; Privacy &gt; Blocked users.
+          </li>
           <li>If you cannot use the app, email me the gym and the username.</li>
         </ul>
       </Section>
@@ -60,7 +65,8 @@ export default function Gym01SupportPage() {
         <ul className="list-disc pl-5 space-y-2">
           <li>
             Settings &gt; Hide me from boards (or the menu on the Boards screen) removes your public
-            check-ins, lifts and witness confirmations. Your username stays reserved.
+            check-ins, lifts and witness confirmations. Your username stays reserved. Turning it off
+            later does not bring the deleted records back.
           </li>
           <li>
             Settings &gt; Delete all my data removes your public records and everything the app
@@ -73,9 +79,9 @@ export default function Gym01SupportPage() {
             at the old gym and frees your username there.
           </li>
           <li>
-            Fix a typo in a finished workout: open it in History and tap Edit. If the best set of a
-            lift changes, its old board record is removed and the corrected one is published if it is
-            still the same day at your gym.
+            Fix a typo in a finished workout: open it in History, tap Edit, fix the set and tap Done.
+            If the best set of a lift changes, its old board record is removed and the corrected one is
+            published if you fixed it on the same day at your gym.
           </li>
           <li>
             Deleted the app already? Email me and I will delete your public records.
@@ -85,10 +91,11 @@ export default function Gym01SupportPage() {
 
       <Section title="Copy for AI">
         <p>
-          Tap Copy for AI on the workout summary, on a workout in History, or in History &gt;
-          Progress Charts for the last 4 weeks, then tap Copy or Share and paste it into ChatGPT,
-          Claude or another AI app. The text leaves out your gym, username and check-ins. See the
-          Privacy Policy for exactly what it contains.
+          Tap Copy for AI on the workout summary or on a workout in History, or Copy last 4 weeks for
+          AI in History &gt; Insights (also in History &gt; Progress Charts), then tap Copy or Share
+          and paste it into ChatGPT, Claude or another AI app. Copy keeps the text on this phone only
+          and clears it after 10 minutes. The text leaves out your gym, username and check-ins. See
+          the Privacy Policy for exactly what it contains.
         </p>
       </Section>
 
