@@ -231,6 +231,27 @@ export default async function ProjectPage({ params }: Props) {
               </p>
             ))}
           </div>
+          {section.image && (
+            <figure className="mt-6">
+              <div className="overflow-hidden rounded-xl border border-border bg-[#020617] p-3">
+                {/* Plain img, not next/image: this is a static export and the
+                    asset is an SVG, which the image optimizer does not
+                    process anyway. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={section.image}
+                  alt={section.imageAlt ?? section.heading}
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+              {section.imageCaption && (
+                <figcaption className="mt-2 text-xs text-muted-foreground">
+                  {section.imageCaption}
+                </figcaption>
+              )}
+            </figure>
+          )}
         </section>
       ))}
 
