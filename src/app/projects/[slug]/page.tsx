@@ -63,6 +63,21 @@ const accentClasses: Record<
     bg: "bg-pink-500/10",
     border: "border-pink-500/20",
   },
+  violet: {
+    text: "text-violet-400",
+    bg: "bg-violet-500/10",
+    border: "border-violet-500/20",
+  },
+  rose: {
+    text: "text-rose-400",
+    bg: "bg-rose-500/10",
+    border: "border-rose-500/20",
+  },
+  sky: {
+    text: "text-sky-400",
+    bg: "bg-sky-500/10",
+    border: "border-sky-500/20",
+  },
 };
 
 function StatusPill({ project }: { project: Project }) {
@@ -174,13 +189,56 @@ export default async function ProjectPage({ params }: Props) {
         </div>
       </header>
 
+      {project.recruiter && (
+        <section className="mb-12 rounded-2xl border border-border/50 bg-card/30 p-6">
+          <p className="text-base font-medium leading-relaxed text-foreground">
+            {project.recruiter.outcome}
+          </p>
+          <dl className="mt-5 grid gap-4 text-sm sm:grid-cols-3">
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Role</dt>
+              <dd className="mt-1 text-foreground">{project.recruiter.role}</dd>
+            </div>
+            {project.recruiter.timeframe && (
+              <div>
+                <dt className="text-xs uppercase tracking-wide text-muted-foreground">Timeframe</dt>
+                <dd className="mt-1 text-foreground">{project.recruiter.timeframe}</dd>
+                {project.recruiter.timeframeSource && (
+                  <dd className="mt-0.5 text-xs text-muted-foreground">
+                    {project.recruiter.timeframeSource}
+                  </dd>
+                )}
+              </div>
+            )}
+            <div>
+              <dt className="text-xs uppercase tracking-wide text-muted-foreground">Team</dt>
+              <dd className="mt-1 text-foreground">{project.recruiter.teamSize}</dd>
+            </div>
+          </dl>
+          <dl className="mt-6 space-y-4 text-sm">
+            <div>
+              <dt className="font-semibold text-foreground">Problem</dt>
+              <dd className="mt-1 leading-relaxed text-muted-foreground">{project.recruiter.problem}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Approach</dt>
+              <dd className="mt-1 leading-relaxed text-muted-foreground">{project.recruiter.approach}</dd>
+            </div>
+            <div>
+              <dt className="font-semibold text-foreground">Result</dt>
+              <dd className="mt-1 leading-relaxed text-muted-foreground">{project.recruiter.result}</dd>
+            </div>
+          </dl>
+        </section>
+      )}
+
       {project.metrics && project.metrics.length > 0 && (
         <section className="mb-16">
           <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
             {project.metrics.map((metric) => (
               <div
                 key={metric.label}
-                className="rounded-xl border border-border/50 bg-card/30 p-4 text-center"
+                className="flex flex-col rounded-xl border border-border/50 bg-card/30 p-4 text-center"
               >
                 <div className={`text-2xl font-bold ${colors.text}`}>
                   {metric.value}
@@ -191,11 +249,30 @@ export default async function ProjectPage({ params }: Props) {
                 <div className="text-xs text-muted-foreground">
                   {metric.subtext}
                 </div>
+                {(metric.source || metric.evidence) && (
+                  <div className="mt-auto pt-3 text-[11px] leading-snug text-muted-foreground/80">
+                    {metric.source && <span>Source: {metric.source}</span>}
+                    {metric.evidence && (
+                      <>
+                        {metric.source && " "}
+                        <a
+                          href={metric.evidence}
+                          target={metric.evidence.startsWith("/") ? undefined : "_blank"}
+                          rel={metric.evidence.startsWith("/") ? undefined : "noopener noreferrer"}
+                          className="underline decoration-dotted underline-offset-2 hover:text-foreground"
+                        >
+                          {metric.evidence.startsWith("/") ? "Write-up" : "Evidence"}
+                        </a>
+                      </>
+                    )}
+                  </div>
+                )}
               </div>
             ))}
           </div>
           <p className="mt-3 text-center text-xs text-muted-foreground">
-            Every figure above is measured or read from the running system.
+            Every figure above is measured or read from the running system. Where a
+            figure has a source line, that is how and when it was read.
           </p>
         </section>
       )}
@@ -231,6 +308,27 @@ export default async function ProjectPage({ params }: Props) {
               </p>
             ))}
           </div>
+          {section.image && (
+            <figure className="mt-6">
+              <div className="overflow-hidden rounded-xl border border-border bg-[#020617] p-3">
+                {/* Plain img, not next/image: this is a static export and the
+                    asset is an SVG, which the image optimizer does not
+                    process anyway. */}
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={section.image}
+                  alt={section.imageAlt ?? section.heading}
+                  className="w-full h-auto"
+                  loading="lazy"
+                />
+              </div>
+              {section.imageCaption && (
+                <figcaption className="mt-2 text-xs text-muted-foreground">
+                  {section.imageCaption}
+                </figcaption>
+              )}
+            </figure>
+          )}
         </section>
       ))}
 

@@ -1,5 +1,5 @@
 import { ProjectCard } from "@/components/ProjectCard";
-import { getProjectsSorted, statusLabel } from "@/data/projects";
+import { cardHighlights, cardMeta, getProjectsSorted, statusLabel } from "@/data/projects";
 
 export default function ProjectsPage() {
   const projects = getProjectsSorted();
@@ -12,8 +12,9 @@ export default function ProjectsPage() {
         </h1>
         <p className="mt-4 text-lg text-muted-foreground max-w-2xl">
           Systems I have actually built, at the size they actually are. Each
-          page states what is running, what is still in progress, and where the
-          numbers came from.
+          page states my role, the timeframe, what is running, what is still in
+          progress, and where every number came from. Projects, not employment:
+          I own and operate all of this myself.
         </p>
       </div>
 
@@ -29,6 +30,8 @@ export default function ProjectsPage() {
             demo={project.demo}
             status={statusLabel[project.status]}
             statusTone={project.status}
+            highlights={cardHighlights(project)}
+            meta={cardMeta(project)}
           />
         ))}
       </div>

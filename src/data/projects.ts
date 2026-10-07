@@ -11,11 +11,38 @@ export interface ProjectMetric {
   label: string;
   value: string;
   subtext: string;
+  /** How the number was measured and when it was read. Shown under the card. */
+  source?: string;
+  /** A public artifact that reproduces or proves the figure. A specific file, not a repo root. */
+  evidence?: string;
 }
 
 export interface ProjectSection {
   heading: string;
   body: string[];
+  /** Optional diagram rendered after the prose. Path is relative to /public. */
+  image?: string;
+  imageAlt?: string;
+  imageCaption?: string;
+}
+
+/**
+ * Recruiter-facing facts. Every field is optional so a project can leave out
+ * anything it cannot source: a missing timeframe is better than a guessed one.
+ */
+export interface ProjectRecruiterFacts {
+  /** e.g. "Solo: designed, built and operate" */
+  role: string;
+  /** Start to end or present, e.g. "Sep 2026 to present". Omit if unsourced. */
+  timeframe?: string;
+  /** Where the timeframe came from, e.g. "repo created 2026-03-24". */
+  timeframeSource?: string;
+  teamSize: string;
+  /** One line. Written before any architecture prose. */
+  outcome: string;
+  problem: string;
+  approach: string;
+  result: string;
 }
 
 export interface Project {
@@ -32,6 +59,7 @@ export interface Project {
   sections: ProjectSection[];
   featured?: boolean;
   order: number;
+  recruiter?: ProjectRecruiterFacts;
 }
 
 export const statusLabel: Record<ProjectStatus, string> = {
@@ -53,6 +81,24 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/UptimeBot",
     demo: "https://checkpulse.dev",
     order: 1,
+    recruiter: {
+      role:
+        "Solo: designed, built, deployed and operate",
+      timeframe:
+        "Mar 2026 to present",
+      timeframeSource:
+        "repo created 2026-03-24, last push 2026-10-04",
+      teamSize:
+        "1",
+      outcome:
+        "A monitoring SaaS running in production on a 1.9 GB VPS, with a documented abuse incident and the fix that closed it.",
+      problem:
+        "Agencies that manage client sites are contractually responsible for uptime but get paged for blips a single probe imagines.",
+      approach:
+        "Probes from three regions, an incident detector that needs two regions to agree, Celery workers sized to the memory the box actually has, and a Cloudflare tunnel so the host opens no ports.",
+      result:
+        "Deployed and public. Three real accounts, no paying customers, and a sender-reputation incident (about 1,191 bot signups) that I detected, root-caused and gated with Turnstile. The page says all of that plainly.",
+    },
     featured: true,
     tech: [
       { name: "FastAPI", category: "API" },
@@ -68,7 +114,7 @@ export const projects: Project[] = [
       { label: "Regions", value: "3", subtext: "US / EU / Asia probes" },
       { label: "Consensus", value: "2+", subtext: "regions must agree to alert" },
       { label: "Alert channels", value: "5", subtext: "Slack, Discord, Telegram, email, webhook" },
-      { label: "Containers", value: "7", subtext: "on a single 1.9 GB VPS" },
+      { label: "Containers", value: "7", subtext: "on a single 1.9 GB VPS", source: "docker compose ps on the VPS", evidence: "https://github.com/BetV3/UptimeBot" },
     ],
     sections: [
       {
@@ -120,12 +166,30 @@ export const projects: Project[] = [
     status: "live",
     accent: "amber",
     order: 2,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "first release 18 Sep 2026, operational notes",
+      teamSize:
+        "1",
+      outcome:
+        "Replaced an alerting path that missed 969 of 970 failures with one that runs outside the thing it watches and has been proven to fire.",
+      problem:
+        "A scheduled job failed 970 times in a row over four days and alerted once, because the alerting lived inside the runtime that was failing.",
+      approach:
+        "A small Python watchdog on a separate host under system cron, stable alert IDs, dedupe and recovery messages, a second host watching the watchdog, and every signal red-run before it was trusted.",
+      result:
+        "109 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
+    },
     featured: true,
     tech: [
       { name: "Python", category: "Language" },
       { name: "System cron", category: "Scheduling" },
       { name: "SSH", category: "Access" },
-      { name: "Discord webhooks", category: "Alerting" },
+      { name: "Webhook alerts", category: "Alerting" },
       { name: "keepalived (VRRP)", category: "High availability" },
       { name: "Langfuse", category: "Observability" },
       { name: "ClickHouse", category: "Datastore" },
@@ -135,6 +199,7 @@ export const projects: Project[] = [
         label: "Silent failure streak",
         value: "970",
         subtext: "consecutive failed runs over four days, one alert on the first",
+        source: "counted from the scheduler's execution log, 18 Sep 2026",
       },
       {
         label: "Same bug, different layers",
@@ -143,13 +208,16 @@ export const projects: Project[] = [
       },
       {
         label: "Signals watched",
-        value: "23",
-        subtext: "5 HTTP, 6 SSH, 11 DNS/keepalived, plus every cron job's last run",
+        value: "109",
+        subtext: "23 at first release (18 Sep 2026); 109 fleet-wide now",
+        source: "the watchdog's signal registry, read 7 Oct 2026",
+        evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
       },
       {
         label: "Dead man's threshold",
         value: "20 min",
         subtext: "~4 missed runs before the other host reports the watchdog gone",
+        source: "the deadman script's threshold; tested by backdating the state file, 18 Sep 2026",
       },
     ],
     sections: [
@@ -164,7 +232,7 @@ export const projects: Project[] = [
       {
         heading: "Four ways the same failure showed up",
         body: [
-          "The cron job jobs-worker was scheduled every five minutes on weekdays. It failed 970 consecutive times over four days. An alert fired on the first failure and then never again, because the job settled into a skipped state and stayed there. The reason nobody heard about failures 2 through 970 is that the alerting lived inside the same agent runtime as the job it was watching. When that runtime stopped doing useful work, it also stopped complaining.",
+          "A worker cron job was scheduled every five minutes on weekdays. It failed 970 consecutive times over four days. An alert fired on the first failure and then never again, because the job settled into a skipped state and stayed there. The reason nobody heard about failures 2 through 970 is that the alerting lived inside the same agent runtime as the job it was watching. When that runtime stopped doing useful work, it also stopped complaining.",
           "An observability plugin showed as enabled in the plugin list and was fully configured with credentials. It recorded nothing. The langfuse SDK was not present in the virtualenv, and the plugin failed open: missing import, no error, silent no-op. Working out why the install had not taken, I found that 3 of the 4 virtualenvs had no pip at all, because uv had created them. The install had failed as quietly as the plugin did.",
           "A keepalived health check ran dig against an internal name, and keepalived reads only the exit code. On the live boxes I measured what dig actually returns: exit 0 on NXDOMAIN, 0 on SERVFAIL, 0 on REFUSED. Only a dead port gave exit 9. So the check could detect that the DNS process was gone and literally nothing else. If the authoritative server died while the resolver stayed up, every internal name would come back NXDOMAIN, the check would still pass, and the virtual IP would stay parked on the broken node.",
           "The fourth one was in the watchdog itself. It posted alerts to a Discord webhook using Python's urllib. Discord sits behind Cloudflare, which rejects urllib's default User-Agent with error 1010 and an HTTP 403. curl worked, urllib did not. The watchdog ran on schedule, looked healthy, and delivered zero alerts. Setting an explicit User-Agent fixed it. I only caught it because I tested delivery instead of trusting that the send code had run.",
@@ -174,7 +242,7 @@ export const projects: Project[] = [
         heading: "What I built",
         body: [
           "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
-          "It covers 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Alerts go to Discord. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 109 signals as of 7 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
           "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
           "It caught a real cron drift failure on its first run.",
         ],
@@ -213,6 +281,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "sky",
     order: 3,
+    recruiter: {
+      role:
+        "Solo: audited, repaired and tested an existing pair",
+      timeframe:
+        "Sep 2026",
+      timeframeSource:
+        "repair and failover test 18 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Found silent replication drift and two health checks that could not fail, fixed them, and proved failover with a timed test.",
+      problem:
+        "Two DNS servers behind a virtual IP that had been flapping 13 times in 30 days while serving different answers, with a health check that only noticed a dead process.",
+      approach:
+        "Compared zone data and serials on both nodes, measured what dig actually exits with, wrote a check that validates the answer's shape, then stopped the authoritative server on purpose and watched.",
+      result:
+        "Zones at serial parity, VIP released in about 4 seconds under a real failure, 20 of 20 probes answered through it. One self-inflicted 2h20m outage, root-caused from the journal and written up.",
+    },
     tech: [
       { name: "PowerDNS Recursor", category: "Client-facing resolver" },
       { name: "PowerDNS Authoritative", category: "Internal zones" },
@@ -226,16 +312,19 @@ export const projects: Project[] = [
         label: "Failover probes",
         value: "20/20",
         subtext: "correct answers during an induced failover",
+        source: "a dig loop against the VIP every 2 s for 40 s, 18 Sep 2026",
       },
       {
         label: "VIP release",
         value: "~4 s",
         subtext: "from check failure to keepalived FAULT",
+        source: "keepalived journal timestamps during the test, 18 Sep 2026",
       },
       {
         label: "VIP moves",
         value: "13",
-        subtext: "keepalived state transitions in 30 days",
+        subtext: "keepalived state transitions in the 30 days before the repair",
+        source: "journalctl -u keepalived on both nodes, 18 Sep 2026",
       },
       {
         label: "Broken health checks",
@@ -316,6 +405,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "violet",
     order: 4,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "first nightly run and restore test 18 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Took five databases from zero copies to nightly restic snapshots on separate hardware, and proved a restore by counting rows out of it.",
+      problem:
+        "One database had a backup. Conversation state, working directories and the task queue had none, and the host they lived on was a single physical machine.",
+      approach:
+        "restic to a host on a different hypervisor, consistent SQLite snapshots through the .backup API, fresh Postgres dumps per run, a retention policy, and a scripted restore that asserts on row counts rather than file presence.",
+      result:
+        "Restore returned 9,849 messages across 316 sessions with integrity ok. The verifier later caught a 0-byte token in a Kubernetes backup that had reported success. No offsite copy yet, stated on the page.",
+    },
     tech: [
       { name: "restic", category: "Backup engine" },
       { name: "PostgreSQL", category: "Dumped databases" },
@@ -333,6 +440,7 @@ export const projects: Project[] = [
         label: "Restore test",
         value: "9,849",
         subtext: "messages read back out of a restored copy, across 316 sessions",
+        source: "SELECT count(*) on the restored SQLite file, 18 Sep 2026",
       },
       {
         label: "Dead man's switch",
@@ -400,6 +508,24 @@ export const projects: Project[] = [
     accent: "blue",
     github: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer",
     order: 5,
+    recruiter: {
+      role:
+        "Solo: designed and built",
+      timeframe:
+        "Jan 2025",
+      timeframeSource:
+        "repo created 2025-01-08",
+      teamSize:
+        "1",
+      outcome:
+        "A Go master-worker log parser that cut a 10M-line job from 36 s to 6 s, with the scaling ceiling measured rather than guessed.",
+      problem:
+        "Parsing a 3.3 GB access log on one core takes long enough to be worth distributing, but distributing it badly makes it slower.",
+      approach:
+        "A master splits the file into byte ranges and hands them to workers over gRPC; workers parse and return status-code counts the master merges. Profiled and tuned buffers to find where the speedup stops.",
+      result:
+        "Near-linear scaling to about 8 workers, flat after that because the job becomes I/O and coordination bound. Adding workers past the knee makes it slower.",
+    },
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -410,8 +536,8 @@ export const projects: Project[] = [
     metrics: [
       { label: "Input size", value: "3.3 GB", subtext: "single access log" },
       { label: "Lines", value: "10M+", subtext: "parsed per run" },
-      { label: "Single worker", value: "36 s", subtext: "measured baseline" },
-      { label: "8-11 workers", value: "6 s", subtext: "~6x speedup" },
+      { label: "Single worker", value: "36 s", subtext: "measured baseline", source: "timed run recorded in the repo README, Jan 2025", evidence: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer" },
+      { label: "8-11 workers", value: "6 s", subtext: "~6x speedup", source: "timed run recorded in the repo README, Jan 2025", evidence: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer" },
     ],
     sections: [
       {
@@ -440,6 +566,24 @@ export const projects: Project[] = [
     accent: "orange",
     github: "https://github.com/BetV3/apigateway",
     order: 6,
+    recruiter: {
+      role:
+        "Solo: designed and built",
+      timeframe:
+        "Feb 2026",
+      timeframeSource:
+        "repo created 2026-02-03",
+      teamSize:
+        "1",
+      outcome:
+        "A from-scratch Go gateway with an explicit middleware chain, two-layer rate limiting and Prometheus metrics, and a stated trade-off instead of a fake benchmark.",
+      problem:
+        "Understanding what a gateway actually has to do, rather than configuring one.",
+      approach:
+        "Request IDs, structured logging, JWT auth with RBAC, in-memory rate limiting that falls back to Redis for limits shared across replicas, round-robin balancing across healthy backends.",
+      result:
+        "Complete and on GitHub. No requests-per-second or p99 figures, because I have not load tested it on hardware I would quote.",
+    },
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -481,6 +625,24 @@ export const projects: Project[] = [
     accent: "cyan",
     github: "https://github.com/BetV3/talos-platform",
     order: 7,
+    recruiter: {
+      role:
+        "Solo: design",
+      timeframe:
+        "May 2026",
+      timeframeSource:
+        "repo created 2026-05-23",
+      teamSize:
+        "1",
+      outcome:
+        "A design package (failure model, IP plan, placement map, failure-test catalogue, secrets policy) for three immutable Kubernetes clusters.",
+      problem:
+        "Talos has no shell, so configuration has to be right before a machine boots. That makes the plan the actual deliverable.",
+      approach:
+        "Write the architecture, the IP plan and the failure tests first, and keep generated secrets out of git by policy.",
+      result:
+        "Design only. The three environments I actually run today are RKE2 (see the three-environment platform page); the Talos design informed their IP plan and placement rules.",
+    },
     tech: [
       { name: "Talos Linux", category: "OS" },
       { name: "Kubernetes", category: "Orchestration" },
@@ -521,6 +683,24 @@ export const projects: Project[] = [
     accent: "purple",
     github: "https://github.com/BetV3/data-pipeline",
     order: 8,
+    recruiter: {
+      role:
+        "Solo: building",
+      timeframe:
+        "Jan 2026 to present",
+      timeframeSource:
+        "repo created 2026-01-26",
+      teamSize:
+        "1",
+      outcome:
+        "A Kafka pipeline built in explicit tiers so the page can say exactly which reliability work is done.",
+      problem:
+        "Event pipelines are easy to describe as handling millions of events a day and hard to actually make reliable.",
+      approach:
+        "Four tiers: tracer bullet first, then dead letter queue, schema evolution and backpressure, then multi-source ingestion, then reliability drills and SLOs.",
+      result:
+        "Tier 0 works; tier 1 is partly built (producer, consumer, metrics). No throughput numbers until tier 3 produces them.",
+    },
     tech: [
       { name: "Apache Kafka", category: "Streaming" },
       { name: "Python", category: "ETL" },
@@ -555,6 +735,24 @@ export const projects: Project[] = [
     accent: "amber",
     github: "https://github.com/BetV3/cloud-infrastructure-pipeline",
     order: 9,
+    recruiter: {
+      role:
+        "Solo: built",
+      timeframe:
+        "Jan 2026 to Sep 2026",
+      timeframeSource:
+        "repo created 2026-01-25, last push 2026-09-21",
+      teamSize:
+        "1",
+      outcome:
+        "Terraform modules for AWS environments with a CI workflow that plans and applies them.",
+      problem:
+        "Provisioning cloud environments reproducibly instead of from a laptop.",
+      approach:
+        "Terraform modules plus a GitHub Actions workflow that runs format, validate, plan and apply.",
+      result:
+        "A working early module set, listed at its real size. The apply path depends on an AWS account that is not currently active.",
+    },
     tech: [
       { name: "Terraform", category: "IaC" },
       { name: "AWS", category: "Cloud" },
@@ -581,6 +779,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "pink",
     order: 10,
+    recruiter: {
+      role:
+        "Solo: own and administer",
+      timeframe:
+        "Nov 2024 to present",
+      timeframeSource:
+        "Homelab_Scripts repo created 2024-11-16",
+      teamSize:
+        "1",
+      outcome:
+        "A seven-host vSphere cluster (132 cores, 607 GB RAM, 40 VMs powered on) that runs everything else on this site, operated through the API with a scoped service account.",
+      problem:
+        "Every project on this site needs somewhere to run, and I wanted to be the person who gets paged when it breaks.",
+      approach:
+        "vCenter 8 managed through govc and the API, a least-privilege automation account scoped to one folder, Cloudflare tunnels instead of port forwarding, and measured hardware limits instead of spec sheets.",
+      result:
+        "The substrate for three Kubernetes environments, the observability stack, the CI platform and the internal CA. Capacity figures on this page are read from the API, not estimated.",
+    },
     tech: [
       { name: "VMware vSphere 8", category: "Hypervisor" },
       { name: "vCenter", category: "Management" },
@@ -589,16 +805,16 @@ export const projects: Project[] = [
       { name: "Linux", category: "Guests" },
     ],
     metrics: [
-      { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01" },
-      { label: "CPU cores", value: "132", subtext: "aggregate physical" },
-      { label: "Memory", value: "608 GB", subtext: "257 GB in use (42%)" },
-      { label: "VMs", value: "46", subtext: "powered on of 53, read from the vCenter API" },
+      { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "CPU cores", value: "132", subtext: "aggregate physical", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "Memory", value: "607 GB", subtext: "273 GB in use (45%)", source: "vCenter quickStats, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "VMs", value: "40", subtext: "powered on of 55 defined", source: "vCenter API, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
     ],
     sections: [
       {
         heading: "What it is",
         body: [
-          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 608 GB of RAM, of which 257 GB is actually in use. It currently runs 46 powered-on VMs out of 53 defined. These figures were read from the vCenter API, not estimated.",
+          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 607 GB of RAM, of which 273 GB is actually in use. It currently runs 40 powered-on VMs out of 55 defined. These figures were read from the vCenter API on 7 October 2026, not estimated, and the script that reads them is in the linked repository.",
           "It is the substrate for the Talos platform, the data pipeline, and the build and automation hosts behind my other projects.",
         ],
       },
@@ -619,9 +835,21 @@ export const projects: Project[] = [
         heading: "What the hardware can and cannot do",
         body: [
           "Capacity planning on used enterprise hardware needs measurement, not spec sheets. Guests here report no AVX2, which looks like an EVC baseline masking it. It is not. The hosts are Sandy Bridge and Ivy Bridge, and AVX2 arrived with Haswell, so the instruction set is physically absent and no cluster setting can expose it.",
-          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 7 percent CPU with 42 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
+          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 8 percent CPU with 45 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
           "The scripts that produced those measurements are in the linked repository, so the claim is checkable rather than asserted.",
         ],
+      },
+      {
+        heading: "The whole estate, drawn from the live APIs",
+        body: [
+          "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
+          "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
+        ],
+        image: "/infrastructure-map.ae158eda.svg",
+        imageAlt:
+          "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
+        imageCaption:
+          "Generated from vCenter, the Kubernetes APIs, VictoriaMetrics, and the watchdog inventory. Addresses replaced with role names.",
       },
     ],
   },
@@ -635,6 +863,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "emerald",
     order: 11,
+    recruiter: {
+      role:
+        "Solo: designed, provisioned and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "clusters built 20 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Three RKE2 clusters (15 nodes) on bare vSphere with control-plane VIPs, provisioned from the API, with failover proven by forcing a leadership transfer.",
+      problem:
+        "A single cluster is not a platform. Dev, staging and production need to exist separately, be rebuildable, and survive losing a control-plane node.",
+      approach:
+        "Nodes created with govc and cloud-init through guestinfo, kube-vip for the API, Cilium, ingress on pinned NodePorts, restore-tested etcd and token backups, and a failover test that was redone after the first one proved nothing.",
+      result:
+        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, etcd fsync p99 inside budget and trended. One constraint stated plainly: the three share one VLAN.",
+    },
     featured: true,
     tech: [
       { name: "RKE2 v1.36.4", category: "Kubernetes" },
@@ -645,25 +891,30 @@ export const projects: Project[] = [
       { name: "govc / cloud-init", category: "Provisioning" },
     ],
     metrics: [
-      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6" },
-      { label: "Nodes Ready", value: "15/15", subtext: "across all three" },
-      { label: "etcd fsync p99", value: "12.74 ms", subtext: "prod, against a 25 ms budget" },
-      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer" },
+      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "etcd fsync p99", value: "12.8 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/failover-test-that-proved-nothing" },
     ],
     sections: [
       {
         heading: "What it is",
         body: [
-          "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo -- no DHCP, no manual installs.",
+          "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo. No DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
+        image: "/diagram-k8s-environments.d945309a.svg",
+        imageAlt:
+          "Three Kubernetes clusters: dev with six nodes, staging with three and a single etcd member, production with six and three etcd members. Each has a kube-vip virtual IP in front of its API. All three share one VLAN.",
+        imageCaption:
+          "Node, pod and etcd fsync figures read from the clusters at render time.",
       },
       {
         heading: "The failover test that first gave a false pass",
         body: [
           "The obvious way to test a control-plane VIP is to stop the API server on whichever node holds it. I did that, the API recovered in about a second, and the test looked green.",
-          "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was -- the address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
-          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from 10.110.0.41 to 10.110.0.43 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions -- zero holders is an outage, two or more is a split brain.",
+          "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was. The address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
+          "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from control-plane node 1 to node 3 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions: zero holders is an outage, two or more is a split brain.",
         ],
       },
       {
@@ -672,7 +923,7 @@ export const projects: Project[] = [
           "The first staging VMs booted cleanly, reported healthy VMware Tools, and had no IP address. Four separate defects were hiding behind that one symptom.",
           "govc's vm.create defaults to an E1000 adapter, which enumerates as ens160 while the netplan targeted ens192. The -disk 0 form segfaults govc outright; the supported form is -disk <path> -link=false. datastore.cp will not create its target directory, and vm.destroy removes it, so a recreate fails on a missing path.",
           "The real one was firmware. The Ubuntu cloud image has no EFI system partition, so an EFI virtual machine boots to an empty device list and never reaches the disk. The working nodes were BIOS. vm.change has no firmware flag, so fixing it meant destroy and recreate.",
-          "I found it by diffing a broken VM against a working one field by field, after a console screenshot showed Ubuntu booting fine with the hostname applied -- which proved cloud-init had run and narrowed the fault to networking alone.",
+          "I found it by diffing a broken VM against a working one field by field, after a console screenshot showed Ubuntu booting fine with the hostname applied, which proved cloud-init had run and narrowed the fault to networking alone.",
         ],
       },
       {
@@ -689,11 +940,29 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py",
     title: "Fleet Observability",
     tagline:
-      "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me -- alerting stays in one place.",
+      "77 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
     category: "Infrastructure",
     status: "live",
     accent: "cyan",
     order: 12,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "built 21 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "A VictoriaMetrics, vmagent and Grafana stack over 77 targets that is deliberately not an alerting path, with every dashboard panel verified to return data.",
+      problem:
+        "The watchdog says what is broken. Nothing said why, and the one number that mattered most (etcd disk latency) had only been spot checked.",
+      approach:
+        "A collector outside the clusters it watches, a least-privilege scraping ServiceAccount per cluster, etcd metrics exposed with a rolling control-plane restart, a persistent remote-write queue proven by stopping the database, and no Alertmanager.",
+      result:
+        "77 of 77 targets up, 23.6M rows an hour, 30 panels verified by executing their queries, and a label-join bug found by that verification. Zero samples lost across a 100 s backend outage.",
+    },
     tech: [
       { name: "VictoriaMetrics", category: "TSDB" },
       { name: "vmagent", category: "Scraping" },
@@ -703,10 +972,10 @@ export const projects: Project[] = [
       { name: "vmware_exporter", category: "Hypervisor metrics" },
     ],
     metrics: [
-      { label: "Scrape targets", value: "76", subtext: "all up at time of writing" },
-      { label: "Ingest rate", value: "25.8M/hr", subtext: "samples into VictoriaMetrics" },
-      { label: "Dashboard panels", value: "30", subtext: "every one verified to return real series" },
-      { label: "Alert signals", value: "82", subtext: "in the watchdog, not in Grafana" },
+      { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
+      { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
+      { label: "Alert signals", value: "109", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
@@ -719,7 +988,7 @@ export const projects: Project[] = [
       {
         heading: "Hosted where it can survive what it watches",
         body: [
-          "The collector does not run inside the clusters it observes. A production outage would take out the dashboard showing the outage -- the same reasoning that keeps the watchdog outside the scheduler it monitors.",
+          "The collector does not run inside the clusters it observes. A production outage would take out the dashboard showing the outage, the same reasoning that keeps the watchdog outside the scheduler it monitors.",
           "It also did not go on the existing monitoring host, which had 25 GB free on a 40 GB disk and was already the single place everything was watched from.",
         ],
       },
@@ -727,8 +996,8 @@ export const projects: Project[] = [
         heading: "A metric that changed what I believed about the storage",
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
-          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile at 13.63 ms on dev and 12.74 ms on production, against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied -- and now trended rather than guessed.",
-          "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging -- which has a single etcd member -- was briefly unavailable, which I planned for rather than discovered.",
+          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 12.5 ms on dev and 12.8 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },
       {
@@ -741,9 +1010,14 @@ export const projects: Project[] = [
       {
         heading: "Watching the watcher",
         body: [
-          "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals -- including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
+          "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals, including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
+        image: "/diagram-observability.a64d432c.svg",
+        imageAlt:
+          "Scrape targets feed vmagent, which writes to VictoriaMetrics and is read by Grafana. The watchdog runs entirely separately and is the only path to an alert. No line connects the two systems.",
+        imageCaption:
+          "Target and signal counts read live. The gap between the two halves is the design.",
       },
     ],
   },
@@ -757,6 +1031,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "rose",
     order: 13,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "tunnel created 20 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "An on-premise Kubernetes cluster reachable from the internet with zero inbound ports, staged so the live site stayed untouched as the rollback.",
+      problem:
+        "Serving from the home cluster without exposing a home IP, and without risking the site recruiters actually visit.",
+      approach:
+        "A separate Cloudflare tunnel with its own credentials, a connector on a control-plane node dialling out, ingress on a pinned NodePort, the apex record protected by the deploy script, and layered checks ending with the public hostname answering.",
+      result:
+        "Public traffic reaches my ingress through the tunnel (the first success was a 404 from my own nginx). 4 connections healthy, 22 synthetic probes, certificate expiry graphed for every endpoint.",
+    },
     tech: [
       { name: "Cloudflare Tunnel", category: "Ingress" },
       { name: "cloudflared", category: "Connector" },
@@ -765,9 +1057,9 @@ export const projects: Project[] = [
       { name: "PowerDNS", category: "Internal DNS" },
     ],
     metrics: [
-      { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere" },
-      { label: "Tunnel connections", value: "4", subtext: "healthy at time of writing" },
-      { label: "Probe coverage", value: "21", subtext: "ICMP, DNS, HTTP and TCP checks" },
+      { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere", source: "design fact: the connector dials out; nothing listens publicly", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
+      { label: "Tunnel connections", value: "4", subtext: "healthy, read 7 Oct 2026", source: "Cloudflare tunnel API, via the edge watchdog signal", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
+      { label: "Probe coverage", value: "22", subtext: "ICMP 9, HTTP 6, TCP 4, DNS 3", source: "blackbox_exporter targets in vmagent, read 7 Oct 2026" },
     ],
     sections: [
       {
@@ -776,19 +1068,375 @@ export const projects: Project[] = [
           "Traffic reaches Cloudflare, travels down an outbound-only tunnel to a connector running on a production control-plane node, and lands on the cluster's ingress controller at a pinned node port. Nothing listens on the public internet and no router rule was changed.",
           "I created a separate tunnel rather than extending the existing one, so it has its own credentials and its own failure domain and can be deleted without touching anything already working.",
         ],
+        image: "/diagram-public-edge.4e943747.svg",
+        imageAlt:
+          "A visitor reaches Cloudflare, which terminates TLS. Inside the cluster a cloudflared connector dials outward to Cloudflare over QUIC. Traffic then reaches ingress-nginx on a NodePort. The home firewall forwards no ports.",
+        imageCaption:
+          "The arrow out of the cluster is the whole point: nothing dials in.",
       },
       {
         heading: "Migrating a live job-hunt asset carefully",
         body: [
           "The site this would eventually serve is the one recruiters actually visit, so the cutover is staged rather than clever. The new path was proved on a subdomain first while the existing production hosting kept serving the apex untouched, and the deployment script refuses to modify the apex record at all.",
-          "The first success was a 404 -- served by my own ingress controller, from the public internet, through the tunnel. That is exactly the right result when no application is deployed behind it yet, and it proves the whole path end to end.",
+          "The first success was a 404, served by my own ingress controller, from the public internet, through the tunnel. That is exactly the right result when no application is deployed behind it yet, and it proves the whole path end to end.",
         ],
       },
       {
         heading: "Signals that test the path, not the parts",
         body: [
           "A tunnel reporting 'healthy' only means a connector attached. It says nothing about whether the hostname reaches a live origin, which is the same 'green at every step, producing nothing' shape as a pipeline that runs perfectly and emits no output.",
-          "So the checks are layered: connections, connector process, and -- the one that matters -- the public hostname answering. That last check treats any 2xx through 4xx as success, because a 404 proves my nginx answered, while a 502 means the origin is dead. Certificate expiry is tracked as a graph for every endpoint, after an internal certificate expired unnoticed and broke continuous integration for several hours.",
+          "So the checks are layered: connections, connector process, and the one that matters most, the public hostname answering. That last check treats any 2xx through 4xx as success, because a 404 proves my nginx answered, while a 502 means the origin is dead. Certificate expiry is tracked as a graph for every endpoint, after an internal certificate expired unnoticed and broke continuous integration for several hours.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "sre-agent",
+    title: "Alert-to-Runbook Responder",
+    tagline:
+      "A scheduled responder that turns a watchdog alert into a diagnosis and an allowlisted runbook, with the only auto-applied fix chosen because its failure mode was 970 silent skips.",
+    category: "Infrastructure / Reliability",
+    status: "live",
+    accent: "amber",
+    order: 14,
+    featured: true,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "first recorded tick 19 Sep 2026 (sre_runs table)",
+      teamSize: "1",
+      outcome:
+        "2,658 recorded ticks and 189 incidents in 18 days, every one with a diagnosis attached, and a structural guarantee that the responder can only run commands from a short allowlist.",
+      problem:
+        "The watchdog raised alerts; the steps after that were a person hand-running commands, and when that person was a chat session the knowledge died with it.",
+      approach:
+        "A cron tick reads the watchdog's state, opens one incident per alert (enforced by a partial unique index), runs a read-only triage, and names a runbook from a registry. The registry validates arguments and builds argv; the responder never constructs a command. Rate limits live in SQL.",
+      result:
+        "One fix is auto-applied (re-pinning a drifted scheduler job: idempotent, reversible, and the failure it fixes is silent and indefinite). Everything else parks for approval or reports only. 15 of 15 guardrail tests pass, each negative case paired with a positive twin.",
+    },
+    tech: [
+      { name: "Python", category: "Language" },
+      { name: "PostgreSQL", category: "Incident and run state" },
+      { name: "System cron", category: "Scheduling" },
+      { name: "SSH", category: "Execution" },
+    ],
+    metrics: [
+      {
+        label: "Ticks recorded",
+        value: "2,658",
+        subtext: "every tick, including failures, since 19 Sep 2026",
+        source: "SELECT count(*) FROM sre_runs, read 7 Oct 2026",
+      },
+      {
+        label: "Incidents",
+        value: "189",
+        subtext: "179 closed; one open incident per alert, enforced by the schema",
+        source: "SELECT count(*) FROM sre_incidents, read 7 Oct 2026",
+      },
+      {
+        label: "Auto-applied fixes",
+        value: "2",
+        subtext: "the other 187 incidents reported a diagnosis and stopped",
+        source: "SELECT runbook, count(*) FROM sre_incidents GROUP BY 1, read 7 Oct 2026",
+      },
+      {
+        label: "Guardrail tests",
+        value: "15/15",
+        subtext: "refusals for shell metacharacters, non-allowlisted hosts, unknown runbooks",
+        source: "python3 test_guardrails.py, run 7 Oct 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "The structural control",
+        body: [
+          "The responder names a runbook. It never writes a command. A registry maps each name to an argument validator and an argv builder, and both run, in that order, before anything executes. Anything that deletes, drops, powers off, reboots, rotates credentials or edits network configuration is absent from the registry by design, and the invariant test asserts that nothing in it is both auto-applied and irreversible.",
+          "Host access is a short allowlist with its own SSH key. The database host is deliberately excluded: no runbook needs it, so the responder holds no key there. I verified the key is refused rather than assuming it.",
+          "Rate limits are rows, not memory. A cooldown of 120 minutes and a cap of three applications a day are answered by querying the incidents table, so a restarted process cannot forget that it already acted.",
+        ],
+      },
+      {
+        heading: "Why exactly one fix is automatic",
+        body: [
+          "A scheduler job in this fleet once failed 970 consecutive times over four days because its model configuration drifted and the job settled into a skipped state. The fix is re-pinning the job, which is idempotent (re-pinning a pinned job is a no-op) and reversible in one command. The cost of applying it wrongly is far below the cost of not applying it, so that one runbook is auto. Restarting a container is gated behind approval until the auto path has a track record.",
+          "Against the live drift alert, the dry run proposed the exact command and did nothing. The live run applied it and recorded auto_applied. Then verification failed to parse, and the responder refused to close the incident and marked it failed. That refusal was the point: an exit code of zero never closes an incident on its own. The following run hit the cooldown and declined to re-apply.",
+        ],
+      },
+      {
+        heading: "Two bugs that only running it found",
+        body: [
+          "The database URL in the config used the postgres:// scheme, and a grep for postgresql:// returned nothing, so the responder tried a local socket and failed quietly. And the watchdog's state file is pretty-printed JSON, while the reader parsed only its last line. Both are the shape every failure on this infrastructure takes: a component that reports success while doing nothing.",
+          "The runbook that restarts a container had never worked on any host. SSH joins its remote argv with spaces and the login shell re-parses the result, so a cd and a compose restart arrived as two separate commands and compose ran in the home directory. It had passed its validation tests for weeks, because validation checked the arguments and never ran anything. I fixed it by quoting the whole payload once, then proved it with a real restart and watched the probes go green afterwards.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This responds to a personal fleet, and 187 of 189 incidents ended in report-only, which is the right outcome for alerts with no safe automated fix. I would not read the fix count as the result. The result is that every tick and every decision sits in a table I can query, so I can answer what it did and why.",
+          "Still open: forced-command SSH keys so the server rejects anything off-list rather than only the Python layer, and an alert when the approval queue fills, because a full queue looks identical to an idle one.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "dev-platform",
+    title: "Self-Hosted Forge and CI",
+    tagline:
+      "Forgejo with branch protection and Kubernetes-hosted runners, where the first green CI run was a false positive and the pipeline was not trusted until it had failed for the right reason.",
+    category: "Infrastructure / Developer Platform",
+    status: "live",
+    accent: "orange",
+    order: 15,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "forge built 19 Sep 2026, runners moved to Kubernetes 20 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "A git forge with server-side branch protection and six parallel CI slots on the dev cluster, validated red and green and watched by three output signals.",
+      problem:
+        "Code written by automation needs a place where it is judged before it is merged, and a pipeline that only ever passes proves nothing.",
+      approach:
+        "Forgejo on its own VM, a runner on a different physical host at first and then three runner pods on the dev Kubernetes cluster, required status checks on main, and a deliberate green, red, green cycle before trusting any of it.",
+      result:
+        "A direct push to main as an admin with a valid token is rejected by the pre-receive hook. The red run dies on a sentinel assertion inside the test file, not on a missing binary. Backups of the forge database and repositories are restore-verified.",
+    },
+    tech: [
+      { name: "Forgejo", category: "Git forge" },
+      { name: "Forgejo Actions", category: "CI" },
+      { name: "Kubernetes (RKE2)", category: "Runner hosting" },
+      { name: "Docker-in-Docker", category: "Job isolation" },
+      { name: "PostgreSQL", category: "Forge state" },
+      { name: "gitleaks", category: "Secret scanning" },
+    ],
+    metrics: [
+      {
+        label: "Parallel CI jobs",
+        value: "6",
+        subtext: "3 runner pods, capacity 2 each, spread across workers",
+        source: "runner Deployment manifest; 3/3 pods Ready via the watchdog, read 7 Oct 2026",
+      },
+      {
+        label: "Red/green cycle",
+        value: "#11 / #14 / #15",
+        subtext: "green, red on a sentinel assertion, green again on the same runners",
+        source: "Forgejo Actions run history, 20 Sep 2026",
+      },
+      {
+        label: "Admin push to main",
+        value: "Rejected",
+        subtext: "pre-receive hook declined, even with a valid admin token",
+        source: "git push output, 19 Sep 2026",
+      },
+      {
+        label: "Output signals",
+        value: "3",
+        subtext: "queue age, runner count, and zero runs in 48 h with a PR open",
+        source: "the watchdog's signal registry, read 7 Oct 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "The first green run was wrong",
+        body: [
+          "The first run with a deliberately failing test failed, which looked like success. The log showed it had never run the test at all: the checkout action is a Node action and the Go image had no node binary. Had I stopped there I would have shipped a pipeline that fails everything regardless of correctness and called it working.",
+          "The proof came in two runs on the same pipeline: a correct tree passed, then the same tree with the test broken again failed. The fix was to clone with git directly. The lesson I kept is to read every red run, because a failure for the wrong reason looks identical to a failure for the right one.",
+        ],
+      },
+      {
+        heading: "Runners on Kubernetes, and four convincing false signals",
+        body: [
+          "Execution moved from a single VM to three runner pods on the dev cluster, each with a Docker-in-Docker sidecar and a capacity of two. The dev workers had been allocated 32 GB each while measuring one percent used, so right-sizing them to 12 GB freed 60 GB and made the staging and production clusters fit.",
+          "Four things went wrong and each looked like something else. A readiness probe that ran docker info hung forever because the runner image has no docker CLI. The entrypoint shell had no /dev/tcp. A ConfigMap was created and never mounted. And cluster DNS could not resolve the internal zone because the node's stub resolver is unreachable from a pod, which registered two of three runners by racing a warm cache and read exactly like a flaky network.",
+        ],
+      },
+      {
+        heading: "The pipeline was not judging correctness",
+        body: [
+          "Registration is not proof. The green, red, green cycle found that CI reported success on a tree containing assert 2 + 2 == 5, because the only test step ran one hardcoded file and nothing under the tests directory was ever executed. Scoping pytest to the repo root then aborted collection on a module-scope sys.exit, which produced a red run that proved nothing.",
+          "Only after both fixes did the red run die on the assertion itself, with the sentinel message in the log. A separate bug had been failing one pull request all along: on a pull_request event the ref name is the PR number, so checkout was cloning branch 3. The same commit showed green on its branch and red on the PR ref, which is indistinguishable from bad code unless you read the log.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This is a single-user forge on a home network. What I am claiming is the controls and the tests that exercised them, not scale. The runner has full access to its Docker socket, which is root-equivalent on that VM. I accept that only because the VM holds nothing else, and I would rather say so here than leave it out.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "internal-pki",
+    title: "Internal CA with Automated Renewal",
+    tagline:
+      "A step-ca certificate authority issuing 24-hour leaf certificates to four services, where the renewal path, not the CA, is the part that was built and tested.",
+    category: "Infrastructure / Security",
+    status: "live",
+    accent: "violet",
+    order: 16,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "CA built 19 Sep 2026, renewal bugs fixed 21 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "Four internal services serve TLS from a private CA with password-free renewal every 15 minutes, monitored by eight watchdog signals including hours-to-expiry per certificate.",
+      problem:
+        "Internal services on a .dev domain cannot be reached over plain HTTP at all (the whole TLD is HSTS-preloaded) and a public CA cannot validate names that only resolve internally.",
+      approach:
+        "step-ca on its own VM placed away from the hosts it authenticates, a JWK provisioner, a systemd timer running step ca renew (which authenticates with the existing certificate, so no secret sits on disk), and a reload script that restarts a service only when the certificate hash changes.",
+      result:
+        "All four services validate without -k. Renewal proven by issuing a 10-minute certificate and watching the serial change. Two self-inflicted renewal bugs found by monitoring and written up below.",
+    },
+    tech: [
+      { name: "step-ca", category: "Certificate authority" },
+      { name: "systemd timers", category: "Renewal" },
+      { name: "Caddy", category: "TLS termination" },
+      { name: "Linux", category: "Hosts" },
+    ],
+    metrics: [
+      {
+        label: "Leaf lifetime",
+        value: "24 h",
+        subtext: "renewed every 15 min when under 8 h remain",
+        source: "CA policy and the cert-renewer timer unit",
+      },
+      {
+        label: "Services on the CA",
+        value: "4",
+        subtext: "all validate against the root without -k",
+        source: "curl against each endpoint with the root installed, 21 Sep 2026",
+      },
+      {
+        label: "Closest call",
+        value: "6h52m",
+        subtext: "remaining on a cert whose renewer had been failing silently for 17 h",
+        source: "watchdog leaf-expiry signal, 21 Sep 2026",
+      },
+      {
+        label: "Restart storm",
+        value: "67/day",
+        subtext: "a service bounced on every timer tick; correct is about 1 per 16 h",
+        source: "container restart count over 24 h, 21 Sep 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "Renewal is the whole point",
+        body: [
+          "A CA that issues 24-hour certificates without automated renewal is a fleet that breaks every day. The property that makes automation safe is that step ca renew authenticates with the certificate it is renewing: no password, no provisioner secret on disk. I verified it by issuing a 10-minute certificate, renewing it, and watching the serial change with no credential used.",
+          "An expired certificate cannot renew itself, so a dead timer means every service loses TLS within 24 hours while the CA reports perfectly healthy. The watchdog therefore checks the timer on each host and the hours remaining on each leaf, which is the signal that actually matters.",
+        ],
+      },
+      {
+        heading: "Two bugs I caused, and what found them",
+        body: [
+          "Fixing an earlier outage, I chowned the certificate directory so the container could read the key. The renewer runs as a different user and rewrites the certificate in place, so every renewal since had failed with permission denied. It was silent for about 17 hours because the certificate was still valid, and it was found with 6 hours 52 minutes to spare. The fix is a shared group with the renewer owning and the container reading; either single-owner answer breaks one side.",
+          "The renewer unit also restarted the service after every run. step ca renew exits zero when it decides nothing needs renewing, so an unconditional restart hook bounced the container every 15 minutes: 67 restarts in a day. Most fell between watchdog polls and the rest produced the random blips I had been seeing. Now a script hashes the certificate and restarts only when the hash changes, which I proved three times with an unchanged cert and once with a changed one. The thing I took away is that an exit code tells you a command succeeded, not that anything happened.",
+        ],
+      },
+      {
+        heading: "Why not the public CA I already pay for",
+        body: [
+          "The public zone is on Cloudflare and Universal SSL already covers every public hostname. A public CA can only issue for names it can validate, and every internal service resolves only on the internal DNS and is deliberately unreachable from the internet. Making it work would mean exposing admin interfaces or running DNS validation for names that intentionally do not exist publicly. So the internal names get step-ca and the public ones stay on Cloudflare. They are different problems and I stopped trying to solve them with one tool.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "The root key is on the same box as the issuing CA, which proper practice keeps offline. There is no CRL or OCSP; revocation relies on 24-hour lifetimes expiring. The CA state directory is in the nightly backup, because losing the root key means re-trusting the CA on every client by hand.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "task-queue",
+    title: "Durable Postgres Task Queue",
+    tagline:
+      "A PostgreSQL queue for long-running automated work: SKIP LOCKED claims, leases with heartbeats, a reaper, human approval gates and capped concurrency, serving six workload types.",
+    category: "Backend Services",
+    status: "live",
+    accent: "blue",
+    order: 17,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "earliest task row 12 Sep 2026; migrations dated 14 and 15 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "111 tasks across six capabilities have moved through claim, heartbeat, approval and completion, with a reaper bug found in production, fixed, and tested in both directions.",
+      problem:
+        "Several automated workloads run for minutes to hours, can die mid-task, and sometimes need a human decision before continuing. A cron job per workload cannot express any of that.",
+      approach:
+        "One tasks table in PostgreSQL. Workers claim with SELECT ... FOR UPDATE SKIP LOCKED, hold a lease they extend by heartbeat, and can park a task as needs_approval with a question attached. An hourly reaper requeues tasks whose lease lapsed. Per-capability caps on running and parked tasks are enforced at claim time.",
+      result:
+        "Concurrent workers never double-claim. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
+    },
+    tech: [
+      { name: "PostgreSQL", category: "Queue and state" },
+      { name: "Python (asyncpg)", category: "Library and MCP server" },
+      { name: "System cron", category: "Reaper" },
+    ],
+    metrics: [
+      {
+        label: "Tasks processed",
+        value: "111",
+        subtext: "66 done, across 6 capabilities, since 12 Sep 2026",
+        source: "SELECT status, count(*) FROM tasks GROUP BY 1, read 7 Oct 2026",
+      },
+      {
+        label: "Reaper bug",
+        value: "2 days",
+        subtext: "a task sat invisible to the reaper because its lease was NULL",
+        source: "incident record, 19 Sep 2026; fix in orchestrator/db.py",
+      },
+      {
+        label: "Flapping signal",
+        value: "369/816",
+        subtext: "runs a queue-depth alert was red (45%) before it was split by owner",
+        source: "watchdog state history, 21 Sep 2026",
+      },
+      {
+        label: "Double claims",
+        value: "0",
+        subtext: "by construction: FOR UPDATE SKIP LOCKED inside one transaction",
+        source: "claim SQL in orchestrator/db.py",
+      },
+    ],
+    sections: [
+      {
+        heading: "What a claim is",
+        body: [
+          "A claim is one transaction: select the oldest approved-or-pending task for a capability with FOR UPDATE SKIP LOCKED, set it running, record the worker and a lease expiry, and return it. Many workers can poll at once and each row is handed out exactly once. Approved tasks (a human already answered) sort ahead of new ones so a resumed task is never starved by fresh work.",
+          "Workers heartbeat to extend the lease. A worker can also release a task back to pending with its state intact, so a long job can be done one slice per tick without holding a lease across the gap.",
+        ],
+      },
+      {
+        heading: "The reaper bug, and testing it both ways",
+        body: [
+          "A task sat in running for two days. The reaper looked for status running and lease_expires_at earlier than now. The task's lease was NULL, because the worker died between claiming and its first heartbeat, and in SQL NULL compared to anything is NULL, not true. The task was permanently invisible to the one process meant to rescue it.",
+          "The fix adds a second clause: a NULL lease on a row not updated for an hour is treated as expired. The test creates a stale orphan and a fresh one and asserts the first is requeued and the second is left alone. I wrote the second half because a fix tested only in the direction that was broken can quietly break the other direction, and a reaper that eats live tasks is worse than one that misses stuck ones.",
+          "Nothing had been calling the reaper at all. It now runs hourly under system cron. The first wrapper captured its output and printed only when non-empty, which made a working reaper look broken; it now always logs its outcome.",
+        ],
+      },
+      {
+        heading: "A signal that mixed two owners",
+        body: [
+          "A queue-depth alert was red in 369 of 816 runs, 45 percent, and flapping. It was not wrong, it was ambiguous: it counted tasks older than six hours in both pending and approved, which merges nothing is claiming work (the system's fault, an incident) with the worker finished and is waiting on a human (my fault, a nudge).",
+          "I split it into two signals with two thresholds: more than five tasks unclaimed for six hours is an incident, and more than five approvals ignored for a day is a nudge. A signal that mixes the system is broken with you have not replied yet trains you to ignore it, and I had started to.",
+        ],
+      },
+      {
+        heading: "Approval gates and caps",
+        body: [
+          "A worker can park a task as needs_approval with a structured request attached. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire if nobody answers, and a count of expired tasks is itself a signal worth reading.",
+          "Caps are enforced at claim time: a per-capability maximum on running tasks, and a maximum on parked tasks that blocks new claims but never blocks resuming an approved one. So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This serves a personal fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
         ],
       },
     ],
@@ -805,4 +1453,17 @@ export function getProjectsSorted(): Project[] {
 
 export function getFeaturedProjects(): Project[] {
   return getProjectsSorted().filter((p) => p.featured);
+}
+
+/** The one or two figures a card shows: the first metrics, trimmed. */
+export function cardHighlights(p: Project): { label: string; value: string }[] {
+  return (p.metrics ?? []).slice(0, 2).map((m) => ({ label: m.label, value: m.value }));
+}
+
+/** "Solo, Sep 2026 to present" style line for a card. */
+export function cardMeta(p: Project): string | undefined {
+  const r = p.recruiter;
+  if (!r) return undefined;
+  const role = r.role.split(":")[0].trim();
+  return r.timeframe ? `${role}, ${r.timeframe}` : role;
 }
