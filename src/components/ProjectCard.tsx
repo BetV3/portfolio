@@ -103,6 +103,7 @@ export function ProjectCard({
         ))}
       </div>
 
+      {(github || demo) && (
       <div className="mt-4 flex items-center gap-4 pt-4 border-t border-border/30">
         {github && (
           <a
@@ -147,6 +148,7 @@ export function ProjectCard({
           </a>
         )}
       </div>
+      )}
     </article>
   );
 }

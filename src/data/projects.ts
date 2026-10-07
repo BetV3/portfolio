@@ -189,7 +189,7 @@ export const projects: Project[] = [
       { name: "Python", category: "Language" },
       { name: "System cron", category: "Scheduling" },
       { name: "SSH", category: "Access" },
-      { name: "Discord webhooks", category: "Alerting" },
+      { name: "Webhook alerts", category: "Alerting" },
       { name: "keepalived (VRRP)", category: "High availability" },
       { name: "Langfuse", category: "Observability" },
       { name: "ClickHouse", category: "Datastore" },
@@ -210,7 +210,7 @@ export const projects: Project[] = [
         label: "Signals watched",
         value: "109",
         subtext: "23 at first release (18 Sep 2026); 109 fleet-wide now",
-        source: "watchdog.py --list, read 7 Oct 2026",
+        source: "the watchdog's signal registry, read 7 Oct 2026",
         evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
       },
       {
@@ -975,7 +975,7 @@ export const projects: Project[] = [
       { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
       { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
-      { label: "Alert signals", value: "109", subtext: "in the watchdog, not in Grafana", source: "watchdog.py --list on the watchdog host, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
+      { label: "Alert signals", value: "109", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
@@ -1232,7 +1232,7 @@ export const projects: Project[] = [
         label: "Output signals",
         value: "3",
         subtext: "queue age, runner count, and zero runs in 48 h with a PR open",
-        source: "watchdog.py --list, read 7 Oct 2026",
+        source: "the watchdog's signal registry, read 7 Oct 2026",
       },
     ],
     sections: [

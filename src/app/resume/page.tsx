@@ -76,60 +76,74 @@ export default function ResumePage() {
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Built and operate three RKE2 Kubernetes clusters (15 nodes) on
+                <span>
+                  Built and operate three RKE2 Kubernetes clusters (15 nodes) on
                 vSphere with kube-vip control-plane VIPs, provisioned from the
                 vCenter API with cloud-init; proved VIP failover by forcing a
                 leadership transfer (about 3 s) after the first test gave a false
                 pass. (<Link className="underline decoration-dotted" href="/projects/k8s-three-environments">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Wrote a fleet watchdog (Python, system cron, separate host) after
+                <span>
+                  Wrote a fleet watchdog (Python, system cron, separate host) after
                 a scheduled job failed 970 consecutive times with one alert;
                 now 109 signals with stable IDs, dedupe, recovery messages and a
                 dead man&apos;s switch, each red-run before being trusted.
                 (<Link className="underline decoration-dotted" href="/projects/fleet-watchdog">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Stood up VictoriaMetrics, vmagent and Grafana over 77 scrape
+                <span>
+                  Stood up VictoriaMetrics, vmagent and Grafana over 77 scrape
                 targets (23.6M rows/hr); verified all 30 dashboard panels by
                 executing their queries, exposed etcd fsync latency with a
                 rolling control-plane restart, and proved the remote-write queue
                 by stopping the database for 100 s with zero sample loss.
                 (<Link className="underline decoration-dotted" href="/projects/observability-stack">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Ran an internal step-ca CA issuing 24-hour certificates to four
+                <span>
+                  Ran an internal step-ca CA issuing 24-hour certificates to four
                 services with password-free automated renewal; found and fixed a
                 renewer that had failed silently for 17 h (6h52m from expiry) and
                 a restart hook that bounced a service 67 times a day.
                 (<Link className="underline decoration-dotted" href="/projects/internal-pki">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Built a PostgreSQL task queue (SKIP LOCKED claims, leases with
+                <span>
+                  Built a PostgreSQL task queue (SKIP LOCKED claims, leases with
                 heartbeats, approval gates, capped concurrency) for long-running
                 automated work; found a reaper bug where a NULL lease made stuck
                 tasks invisible and fixed it with tests in both directions.
                 (<Link className="underline decoration-dotted" href="/projects/task-queue">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Set up nightly restic backups to separate hardware for five
+                <span>
+                  Set up nightly restic backups to separate hardware for five
                 databases that previously had none, with a scripted restore that
                 read back 9,849 rows; split a flapping alert that was red in 369
                 of 816 runs into an incident signal and a human nudge.
                 (<Link className="underline decoration-dotted" href="/projects/verified-backups">details</Link>)
+                </span>
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
-                Deployed a self-hosted forge with server-side branch protection
+                <span>
+                  Deployed a self-hosted forge with server-side branch protection
                 and six parallel CI slots on Kubernetes, validated green, red and
                 green again before trusting it; exposed a production cluster
                 through a Cloudflare tunnel with zero inbound ports.
                 (<Link className="underline decoration-dotted" href="/projects/dev-platform">details</Link>)
+                </span>
               </li>
             </ul>
           </div>

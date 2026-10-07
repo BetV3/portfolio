@@ -44,7 +44,7 @@ export const siteStats: SiteStat[] = [
   {
     value: "109",
     label: "monitored signals in a watchdog I wrote",
-    source: "watchdog.py --list, 7 Oct 2026",
+    source: "the watchdog's signal registry, 7 Oct 2026",
     href: "/projects/fleet-watchdog",
   },
   {
@@ -54,10 +54,10 @@ export const siteStats: SiteStat[] = [
     href: "/projects/observability-stack",
   },
   {
-    value: "11",
-    label: "incident write-ups with the root cause",
-    source: "3 blog posts plus 8 project pages, each with a root-caused incident section",
-    href: "/blog",
+    value: "9",
+    label: "project pages with a root-caused incident write-up",
+    source: "counted on this site, 7 Oct 2026; 3 more incidents are blog posts",
+    href: "/projects",
   },
   {
     value: "9,849",

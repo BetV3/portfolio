@@ -28,7 +28,7 @@ export default function Home() {
             I build and operate systems end to end: a monitoring SaaS live in
             production, three Kubernetes environments, an observability stack
             and a fleet watchdog, all on a seven-host vSphere cluster I
-            administer myself. Looking for {recruiterFacts.roles.toLowerCase()}.
+            administer myself. Looking for backend, platform, infrastructure, SRE or DevOps roles.
           </p>
 
           <dl className="mt-8 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
