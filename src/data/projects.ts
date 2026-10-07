@@ -1353,7 +1353,7 @@ export const projects: Project[] = [
     slug: "task-queue",
     title: "Durable Postgres Task Queue",
     tagline:
-      "A PostgreSQL queue for long-running automated work: SKIP LOCKED claims, leases with heartbeats, a reaper, human approval gates and capped concurrency, serving six workload types.",
+      "A PostgreSQL queue that runs my long-running agent work, including a job-application pipeline that has submitted 27 applications with a human approving every one: SKIP LOCKED claims, leases with heartbeats, a reaper, approval gates and capped concurrency.",
     category: "Backend Services",
     status: "live",
     accent: "blue",
@@ -1364,13 +1364,13 @@ export const projects: Project[] = [
       timeframeSource: "earliest task row 12 Sep 2026; migrations dated 14 and 15 Sep 2026",
       teamSize: "1",
       outcome:
-        "111 tasks across six capabilities have moved through claim, heartbeat, approval and completion, with a reaper bug found in production, fixed, and tested in both directions.",
+        "111 tasks across six workload types (job applications, VM operations, iOS and Roblox builds, code changes, briefings) have moved through claim, heartbeat, approval and completion. 130 human-approval gates, 0 submissions without a human decision, and a reaper bug found in production, fixed, and tested in both directions.",
       problem:
-        "Several automated workloads run for minutes to hours, can die mid-task, and sometimes need a human decision before continuing. A cron job per workload cannot express any of that.",
+        "My automated workloads run for minutes to hours, die mid-task when a model call fails or a browser tab closes, and sometimes need a human decision before continuing: submit this job application, approve this VM change. A cron job per workload cannot express any of that.",
       approach:
         "One tasks table in PostgreSQL. Workers claim with SELECT ... FOR UPDATE SKIP LOCKED, hold a lease they extend by heartbeat, and can park a task as needs_approval with a question attached. An hourly reaper requeues tasks whose lease lapsed. Per-capability caps on running and parked tasks are enforced at claim time.",
       result:
-        "Concurrent workers never double-claim. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
+        "Concurrent workers never double-claim. The job-application workload alone has run 69 tasks through drafting, form filling and a mandatory confirm-before-submit gate, resulting in 27 submitted applications and 0 submitted without a human decision. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
     },
     tech: [
       { name: "PostgreSQL", category: "Queue and state" },
@@ -1381,8 +1381,8 @@ export const projects: Project[] = [
       {
         label: "Tasks processed",
         value: "111",
-        subtext: "66 done, across 6 capabilities, since 12 Sep 2026",
-        source: "SELECT status, count(*) FROM tasks GROUP BY 1, read 7 Oct 2026",
+        subtext: "66 done across 6 workload types since 12 Sep 2026; 69 are job applications",
+        source: "SELECT capability, status, count(*) FROM tasks GROUP BY 1, 2, read 7 Oct 2026",
       },
       {
         label: "Reaper bug",
@@ -1395,6 +1395,12 @@ export const projects: Project[] = [
         value: "369/816",
         subtext: "runs a queue-depth alert was red (45%) before it was split by owner",
         source: "watchdog state history, 21 Sep 2026",
+      },
+      {
+        label: "Approval gates",
+        value: "130",
+        subtext: "times a worker parked and waited for a human; 0 job applications submitted without one",
+        source: "SELECT count(*) FROM task_log WHERE event = 'needs_approval'; tasks.approved_by on every submitted application, read 7 Oct 2026",
       },
       {
         label: "Double claims",
@@ -1427,16 +1433,23 @@ export const projects: Project[] = [
         ],
       },
       {
+        heading: "What runs on it",
+        body: [
+          "Six workload types share the one table. The largest is a job-application pipeline: a nightly task scrapes postings from two boards, filters and ranks them, and enqueues the top 15. A worker tick every 5 minutes claims one, drafts a CV and cover letter tailored to the posting (compiled from LaTeX, 2 pages, checked), fills the application form in a headless browser, and parks the task with a screenshot for a human to approve. Only after that approval does the next tick click submit. 69 tasks have gone through it, 27 were submitted, 8 were skipped on hard requirements, and 12 expired unanswered.",
+          "The others are smaller: VM lifecycle operations on the homelab (36 tasks, every one approved before it touched vCenter), iOS and Roblox build agents, code changes, and a daily briefing. Each has its own caps and its own approval rules, but the claim, lease, heartbeat and reaper code is shared.",
+        ],
+      },
+      {
         heading: "Approval gates and caps",
         body: [
-          "A worker can park a task as needs_approval with a structured request attached. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire if nobody answers, and a count of expired tasks is itself a signal worth reading.",
-          "Caps are enforced at claim time: a per-capability maximum on running tasks, and a maximum on parked tasks that blocks new claims but never blocks resuming an approved one. So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
+          "A worker can park a task as needs_approval with a structured request attached: the filled application form and a screenshot, or the exact VM change about to be made. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire after 48 hours if nobody answers, and a count of expired tasks (12 so far) is itself a signal worth reading.",
+          "Caps are enforced at claim time: a per-capability maximum on running tasks (2 for job applications), a maximum on parked tasks (8) that blocks new claims but never blocks resuming an approved one, and a daily ceiling on new work (15). So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
         ],
       },
       {
         heading: "Honest status",
         body: [
-          "This serves a personal fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
+          "This serves my own fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. The job-application workload drafts a tailored CV and cover letter per posting and fills the form, but a human reads every one and clicks submit; nothing in the pipeline can submit on its own. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
         ],
       },
     ],
