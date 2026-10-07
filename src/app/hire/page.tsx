@@ -19,7 +19,7 @@ const services = [
       { label: "Provisioning scripts", href: "https://github.com/BetV3/Homelab_Scripts/tree/main/vsphere" },
     ],
     evidence:
-      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync p99 measured at 8.0 to 13.6 ms against a 25 ms budget.",
+      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync p99 measured between 9.6 and 13.4 ms across the three clusters (7 October 2026) against a 25 ms budget.",
   },
   {
     title: "Monitoring that catches real failures",
@@ -30,7 +30,7 @@ const services = [
       { label: "Watchdog modules and red-run tests", href: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     evidence:
-      "97 signals across 20 hosts. It caught a certificate 6 hours from expiry, a renewal timer that restarted a service 67 times in a day, and a trace pipeline that had silently ingested nothing for two days.",
+      "109 signals as of 7 October 2026. It caught a certificate under 7 hours from expiry, a renewal timer that restarted a service 67 times in a day, and a trace pipeline that had silently ingested nothing for two days.",
   },
   {
     title: "Backups you have actually restored",
@@ -48,11 +48,11 @@ const services = [
     summary:
       "Pipelines that fail for the right reason. I prove a check works by making it go red on purpose before I trust it, because a check that has never failed is decoration.",
     proof: [
+      { label: "Self-hosted forge and CI", href: "/projects/dev-platform" },
       { label: "The public edge", href: "/projects/public-edge" },
-      { label: "CheckPulse", href: "/projects/checkpulse" },
     ],
     evidence:
-      "On this site's own pipeline: lint, types, build, plus checks for stale figures, dead links, and unrendered pages. Each one red-run against a deliberately broken tree before it shipped.",
+      "A self-hosted forge whose first green run was a false positive, kept untrusted until the same pipeline passed correct code and failed a sentinel assertion. This site's own CI does the same: every custom check was red-run against a deliberately broken tree before it shipped.",
   },
 ];
 

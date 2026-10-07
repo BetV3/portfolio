@@ -1090,6 +1090,357 @@ export const projects: Project[] = [
       },
     ],
   },
+  {
+    slug: "sre-agent",
+    title: "Alert-to-Runbook Responder",
+    tagline:
+      "A scheduled responder that turns a watchdog alert into a diagnosis and an allowlisted runbook, with the only auto-applied fix chosen because its failure mode was 970 silent skips.",
+    category: "Infrastructure / Reliability",
+    status: "live",
+    accent: "amber",
+    order: 14,
+    featured: true,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "first recorded tick 19 Sep 2026 (sre_runs table)",
+      teamSize: "1",
+      outcome:
+        "2,658 recorded ticks and 189 incidents in 18 days, every one with a diagnosis attached, and a structural guarantee that the responder can only run commands from a short allowlist.",
+      problem:
+        "The watchdog raised alerts; the steps after that were a person hand-running commands, and when that person was a chat session the knowledge died with it.",
+      approach:
+        "A cron tick reads the watchdog's state, opens one incident per alert (enforced by a partial unique index), runs a read-only triage, and names a runbook from a registry. The registry validates arguments and builds argv; the responder never constructs a command. Rate limits live in SQL.",
+      result:
+        "One fix is auto-applied (re-pinning a drifted scheduler job: idempotent, reversible, and the failure it fixes is silent and indefinite). Everything else parks for approval or reports only. 15 of 15 guardrail tests pass, each negative case paired with a positive twin.",
+    },
+    tech: [
+      { name: "Python", category: "Language" },
+      { name: "PostgreSQL", category: "Incident and run state" },
+      { name: "System cron", category: "Scheduling" },
+      { name: "SSH", category: "Execution" },
+    ],
+    metrics: [
+      {
+        label: "Ticks recorded",
+        value: "2,658",
+        subtext: "every tick, including failures, since 19 Sep 2026",
+        source: "SELECT count(*) FROM sre_runs, read 7 Oct 2026",
+      },
+      {
+        label: "Incidents",
+        value: "189",
+        subtext: "179 closed; one open incident per alert, enforced by the schema",
+        source: "SELECT count(*) FROM sre_incidents, read 7 Oct 2026",
+      },
+      {
+        label: "Auto-applied fixes",
+        value: "2",
+        subtext: "the other 187 incidents reported a diagnosis and stopped",
+        source: "SELECT runbook, count(*) FROM sre_incidents GROUP BY 1, read 7 Oct 2026",
+      },
+      {
+        label: "Guardrail tests",
+        value: "15/15",
+        subtext: "refusals for shell metacharacters, non-allowlisted hosts, unknown runbooks",
+        source: "python3 test_guardrails.py, run 7 Oct 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "The structural control",
+        body: [
+          "The responder names a runbook. It never writes a command. A registry maps each name to an argument validator and an argv builder, and both run, in that order, before anything executes. Anything that deletes, drops, powers off, reboots, rotates credentials or edits network configuration is absent from the registry by design, and the invariant test asserts that nothing in it is both auto-applied and irreversible.",
+          "Host access is a short allowlist with its own SSH key. The database host is deliberately excluded: no runbook needs it, so the responder holds no key there. I verified the key is refused rather than assuming it.",
+          "Rate limits are rows, not memory. A cooldown of 120 minutes and a cap of three applications a day are answered by querying the incidents table, so a restarted process cannot forget that it already acted.",
+        ],
+      },
+      {
+        heading: "Why exactly one fix is automatic",
+        body: [
+          "A scheduler job in this fleet once failed 970 consecutive times over four days because its model configuration drifted and the job settled into a skipped state. The fix is re-pinning the job, which is idempotent (re-pinning a pinned job is a no-op) and reversible in one command. The cost of applying it wrongly is far below the cost of not applying it, so that one runbook is auto. Restarting a container is gated behind approval until the auto path has a track record.",
+          "Against the live drift alert, the dry run proposed the exact command and did nothing. The live run applied it and recorded auto_applied. Then verification failed to parse, and the responder refused to close the incident and marked it failed. That refusal was the point: an exit code of zero never closes an incident on its own. The following run hit the cooldown and declined to re-apply.",
+        ],
+      },
+      {
+        heading: "Two bugs that only running it found",
+        body: [
+          "The database URL in the config used the postgres:// scheme, and a grep for postgresql:// returned nothing, so the responder tried a local socket and failed quietly. And the watchdog's state file is pretty-printed JSON, while the reader parsed only its last line. Both are the shape every failure on this infrastructure takes: a component that reports success while doing nothing.",
+          "The runbook that restarts a container had never worked on any host. SSH joins its remote argv with spaces and the login shell re-parses the result, so a cd and a compose restart arrived as separate commands and compose ran in the home directory. It passed its validation tests for weeks because validation checked arguments, never execution. Fixed by quoting the whole payload once, and proven with a real restart with probes green afterwards.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This responds to a personal fleet, and 187 of 189 incidents ended in report-only, which is the correct outcome for alerts with no safe automated fix. The number worth reading is not how much it fixed but that every tick and every decision is in a table I can query.",
+          "Still open: forced-command SSH keys so the server rejects anything off-list rather than only the Python layer, and an alert when the approval queue fills, because a full queue looks identical to an idle one.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "dev-platform",
+    title: "Self-Hosted Forge and CI",
+    tagline:
+      "Forgejo with branch protection and Kubernetes-hosted runners, where the first green CI run was a false positive and the pipeline was not trusted until it had failed for the right reason.",
+    category: "Infrastructure / Developer Platform",
+    status: "live",
+    accent: "orange",
+    order: 15,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "forge built 19 Sep 2026, runners moved to Kubernetes 20 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "A git forge with server-side branch protection and six parallel CI slots on the dev cluster, validated red and green and watched by three output signals.",
+      problem:
+        "Code written by automation needs a place where it is judged before it is merged, and a pipeline that only ever passes proves nothing.",
+      approach:
+        "Forgejo on its own VM, a runner on a different physical host at first and then three runner pods on the dev Kubernetes cluster, required status checks on main, and a deliberate green, red, green cycle before trusting any of it.",
+      result:
+        "A direct push to main as an admin with a valid token is rejected by the pre-receive hook. The red run dies on a sentinel assertion inside the test file, not on a missing binary. Backups of the forge database and repositories are restore-verified.",
+    },
+    tech: [
+      { name: "Forgejo", category: "Git forge" },
+      { name: "Forgejo Actions", category: "CI" },
+      { name: "Kubernetes (RKE2)", category: "Runner hosting" },
+      { name: "Docker-in-Docker", category: "Job isolation" },
+      { name: "PostgreSQL", category: "Forge state" },
+      { name: "gitleaks", category: "Secret scanning" },
+    ],
+    metrics: [
+      {
+        label: "Parallel CI jobs",
+        value: "6",
+        subtext: "3 runner pods, capacity 2 each, spread across workers",
+        source: "runner Deployment manifest; 3/3 pods Ready via the watchdog, read 7 Oct 2026",
+      },
+      {
+        label: "Red/green cycle",
+        value: "#11 / #14 / #15",
+        subtext: "green, red on a sentinel assertion, green again on the same runners",
+        source: "Forgejo Actions run history, 20 Sep 2026",
+      },
+      {
+        label: "Admin push to main",
+        value: "Rejected",
+        subtext: "pre-receive hook declined, even with a valid admin token",
+        source: "git push output, 19 Sep 2026",
+      },
+      {
+        label: "Output signals",
+        value: "3",
+        subtext: "queue age, runner count, and zero runs in 48 h with a PR open",
+        source: "watchdog.py --list, read 7 Oct 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "The first green run was wrong",
+        body: [
+          "The first run with a deliberately failing test failed, which looked like success. The log showed it had never run the test at all: the checkout action is a Node action and the Go image had no node binary. Had I stopped there I would have shipped a pipeline that fails everything regardless of correctness and called it working.",
+          "The proof came in two runs on the same pipeline: a correct tree passed, then the same tree with the test broken again failed. Clone with git directly, and never trust a red run you have not read.",
+        ],
+      },
+      {
+        heading: "Runners on Kubernetes, and four convincing false signals",
+        body: [
+          "Execution moved from a single VM to three runner pods on the dev cluster, each with a Docker-in-Docker sidecar and a capacity of two. The dev workers had been allocated 32 GB each while measuring one percent used, so right-sizing them to 12 GB freed 60 GB and made the staging and production clusters fit.",
+          "Four things went wrong and each looked like something else. A readiness probe that ran docker info hung forever because the runner image has no docker CLI. The entrypoint shell had no /dev/tcp. A ConfigMap was created and never mounted. And cluster DNS could not resolve the internal zone because the node's stub resolver is unreachable from a pod, which registered two of three runners by racing a warm cache and read exactly like a flaky network.",
+        ],
+      },
+      {
+        heading: "The pipeline was not judging correctness",
+        body: [
+          "Registration is not proof. The green, red, green cycle found that CI reported success on a tree containing assert 2 + 2 == 5, because the only test step ran one hardcoded file and nothing under the tests directory was ever executed. Scoping pytest to the repo root then aborted collection on a module-scope sys.exit, which produced a red run that proved nothing.",
+          "Only after both fixes did the red run die on the assertion itself, with the sentinel message in the log. A separate bug had been failing one pull request all along: on a pull_request event the ref name is the PR number, so checkout was cloning branch 3. The same commit showed green on its branch and red on the PR ref, which is indistinguishable from bad code unless you read the log.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This is a single-user forge on a home network. The claims are the controls and the tests that exercised them, not scale. The runner has full access to its Docker socket, which is root-equivalent on that VM; acceptable only because the VM holds nothing else, and stated here rather than hidden.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "internal-pki",
+    title: "Internal CA with Automated Renewal",
+    tagline:
+      "A step-ca certificate authority issuing 24-hour leaf certificates to four services, where the renewal path, not the CA, is the part that was built and tested.",
+    category: "Infrastructure / Security",
+    status: "live",
+    accent: "violet",
+    order: 16,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "CA built 19 Sep 2026, renewal bugs fixed 21 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "Four internal services serve TLS from a private CA with password-free renewal every 15 minutes, monitored by eight watchdog signals including hours-to-expiry per certificate.",
+      problem:
+        "Internal services on a .dev domain cannot be reached over plain HTTP at all (the whole TLD is HSTS-preloaded) and a public CA cannot validate names that only resolve internally.",
+      approach:
+        "step-ca on its own VM placed away from the hosts it authenticates, a JWK provisioner, a systemd timer running step ca renew (which authenticates with the existing certificate, so no secret sits on disk), and a reload script that restarts a service only when the certificate hash changes.",
+      result:
+        "All four services validate without -k. Renewal proven by issuing a 10-minute certificate and watching the serial change. Two self-inflicted renewal bugs found by monitoring and written up below.",
+    },
+    tech: [
+      { name: "step-ca", category: "Certificate authority" },
+      { name: "systemd timers", category: "Renewal" },
+      { name: "Caddy", category: "TLS termination" },
+      { name: "Linux", category: "Hosts" },
+    ],
+    metrics: [
+      {
+        label: "Leaf lifetime",
+        value: "24 h",
+        subtext: "renewed every 15 min when under 8 h remain",
+        source: "CA policy and the cert-renewer timer unit",
+      },
+      {
+        label: "Services on the CA",
+        value: "4",
+        subtext: "all validate against the root without -k",
+        source: "curl against each endpoint with the root installed, 21 Sep 2026",
+      },
+      {
+        label: "Closest call",
+        value: "6h52m",
+        subtext: "remaining on a cert whose renewer had been failing silently for 17 h",
+        source: "watchdog leaf-expiry signal, 21 Sep 2026",
+      },
+      {
+        label: "Restart storm",
+        value: "67/day",
+        subtext: "a service bounced on every timer tick; correct is about 1 per 16 h",
+        source: "container restart count over 24 h, 21 Sep 2026",
+      },
+    ],
+    sections: [
+      {
+        heading: "Renewal is the whole point",
+        body: [
+          "A CA that issues 24-hour certificates without automated renewal is a fleet that breaks every day. The property that makes automation safe is that step ca renew authenticates with the certificate it is renewing: no password, no provisioner secret on disk. I verified it by issuing a 10-minute certificate, renewing it, and watching the serial change with no credential used.",
+          "An expired certificate cannot renew itself, so a dead timer means every service loses TLS within 24 hours while the CA reports perfectly healthy. The watchdog therefore checks the timer on each host and the hours remaining on each leaf, which is the signal that actually matters.",
+        ],
+      },
+      {
+        heading: "Two bugs I caused, and what found them",
+        body: [
+          "Fixing an earlier outage, I chowned the certificate directory so the container could read the key. The renewer runs as a different user and rewrites the certificate in place, so every renewal since had failed with permission denied. It was silent for about 17 hours because the certificate was still valid, and it was found with 6 hours 52 minutes to spare. The fix is a shared group with the renewer owning and the container reading; either single-owner answer breaks one side.",
+          "The renewer unit also restarted the service after every run. step ca renew exits zero when it decides nothing needs renewing, so an unconditional restart hook bounced the container every 15 minutes: 67 restarts in a day. Most fell between watchdog polls and the rest produced the random blips I had been seeing. Now a script hashes the certificate and restarts only on change, proven three times with an unchanged cert and once with a changed one. An exit code is not a change signal.",
+        ],
+      },
+      {
+        heading: "Why not the public CA I already pay for",
+        body: [
+          "The public zone is on Cloudflare and Universal SSL already covers every public hostname. A public CA can only issue for names it can validate, and every internal service resolves only on the internal DNS and is deliberately unreachable from the internet. Making it work would mean exposing admin interfaces or running DNS validation for names that intentionally do not exist publicly. Internal is step-ca; public is Cloudflare. Different problems.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "The root key is on the same box as the issuing CA, which proper practice keeps offline. There is no CRL or OCSP; revocation relies on 24-hour lifetimes expiring. The CA state directory is in the nightly backup, because losing the root key means re-trusting the CA on every client by hand.",
+        ],
+      },
+    ],
+  },
+  {
+    slug: "task-queue",
+    title: "Durable Postgres Task Queue",
+    tagline:
+      "A PostgreSQL queue for long-running automated work: SKIP LOCKED claims, leases with heartbeats, a reaper, human approval gates and capped concurrency, serving six workload types.",
+    category: "Backend Services",
+    status: "live",
+    accent: "blue",
+    order: 17,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Sep 2026 to present",
+      timeframeSource: "earliest task row 12 Sep 2026; migrations dated 14 and 15 Sep 2026",
+      teamSize: "1",
+      outcome:
+        "111 tasks across six capabilities have moved through claim, heartbeat, approval and completion, with a reaper bug found in production, fixed, and tested in both directions.",
+      problem:
+        "Several automated workloads run for minutes to hours, can die mid-task, and sometimes need a human decision before continuing. A cron job per workload cannot express any of that.",
+      approach:
+        "One tasks table in PostgreSQL. Workers claim with SELECT ... FOR UPDATE SKIP LOCKED, hold a lease they extend by heartbeat, and can park a task as needs_approval with a question attached. An hourly reaper requeues tasks whose lease lapsed. Per-capability caps on running and parked tasks are enforced at claim time.",
+      result:
+        "Concurrent workers never double-claim. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
+    },
+    tech: [
+      { name: "PostgreSQL", category: "Queue and state" },
+      { name: "Python (asyncpg)", category: "Library and MCP server" },
+      { name: "System cron", category: "Reaper" },
+    ],
+    metrics: [
+      {
+        label: "Tasks processed",
+        value: "111",
+        subtext: "66 done, across 6 capabilities, since 12 Sep 2026",
+        source: "SELECT status, count(*) FROM tasks GROUP BY 1, read 7 Oct 2026",
+      },
+      {
+        label: "Reaper bug",
+        value: "2 days",
+        subtext: "a task sat invisible to the reaper because its lease was NULL",
+        source: "incident record, 19 Sep 2026; fix in orchestrator/db.py",
+      },
+      {
+        label: "Flapping signal",
+        value: "369/816",
+        subtext: "runs a queue-depth alert was red (45%) before it was split by owner",
+        source: "watchdog state history, 21 Sep 2026",
+      },
+      {
+        label: "Double claims",
+        value: "0",
+        subtext: "by construction: FOR UPDATE SKIP LOCKED inside one transaction",
+        source: "claim SQL in orchestrator/db.py",
+      },
+    ],
+    sections: [
+      {
+        heading: "What a claim is",
+        body: [
+          "A claim is one transaction: select the oldest approved-or-pending task for a capability with FOR UPDATE SKIP LOCKED, set it running, record the worker and a lease expiry, and return it. Many workers can poll at once and each row is handed out exactly once. Approved tasks (a human already answered) sort ahead of new ones so a resumed task is never starved by fresh work.",
+          "Workers heartbeat to extend the lease. A worker can also release a task back to pending with its state intact, so a long job can be done one slice per tick without holding a lease across the gap.",
+        ],
+      },
+      {
+        heading: "The reaper bug, and testing it both ways",
+        body: [
+          "A task sat in running for two days. The reaper looked for status running and lease_expires_at earlier than now. The task's lease was NULL, because the worker died between claiming and its first heartbeat, and in SQL NULL compared to anything is NULL, not true. The task was permanently invisible to the one process meant to rescue it.",
+          "The fix adds a second clause: a NULL lease on a row not updated for an hour is treated as expired. The test creates a stale orphan and a fresh one and asserts the first is requeued and the second is left alone. A fix tested only in the direction that was broken can quietly break the other direction.",
+          "Nothing had been calling the reaper at all. It now runs hourly under system cron. The first wrapper captured its output and printed only when non-empty, which made a working reaper look broken; it now always logs its outcome.",
+        ],
+      },
+      {
+        heading: "A signal that mixed two owners",
+        body: [
+          "A queue-depth alert was red in 369 of 816 runs, 45 percent, and flapping. It was not wrong, it was ambiguous: it counted tasks older than six hours in both pending and approved, which merges nothing is claiming work (the system's fault, an incident) with the worker finished and is waiting on a human (my fault, a nudge).",
+          "Split into two signals with two thresholds: more than five unclaimed for six hours pages; more than five approvals ignored for a day nudges. A signal that mixes the system is broken with you have not replied yet trains you to ignore it.",
+        ],
+      },
+      {
+        heading: "Approval gates and caps",
+        body: [
+          "A worker can park a task as needs_approval with a structured request attached. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire if nobody answers, and a count of expired tasks is itself a signal worth reading.",
+          "Caps live at claim time: a per-capability maximum on running tasks, and a maximum on parked tasks that blocks new claims but never blocks resuming an approved one. A workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
+        ],
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "This serves a personal fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
+        ],
+      },
+    ],
+  },
 ];
 
 export function getProject(slug: string): Project | undefined {
@@ -1102,4 +1453,17 @@ export function getProjectsSorted(): Project[] {
 
 export function getFeaturedProjects(): Project[] {
   return getProjectsSorted().filter((p) => p.featured);
+}
+
+/** The one or two figures a card shows: the first metrics, trimmed. */
+export function cardHighlights(p: Project): { label: string; value: string }[] {
+  return (p.metrics ?? []).slice(0, 2).map((m) => ({ label: m.label, value: m.value }));
+}
+
+/** "Solo, Sep 2026 to present" style line for a card. */
+export function cardMeta(p: Project): string | undefined {
+  const r = p.recruiter;
+  if (!r) return undefined;
+  const role = r.role.split(":")[0].trim();
+  return r.timeframe ? `${role}, ${r.timeframe}` : role;
 }

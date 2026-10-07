@@ -60,11 +60,19 @@ jobs:
       - name: No placeholder or fabricated content
         run: |
           set -uo pipefail
+          # Only scan paths that exist. GNU grep exits 2 when any path is
+          # missing, EVEN IF it also found a match, and `if grep` reads 2 as
+          # "no match". With no content/ directory in the repo this check
+          # passed every run without ever failing on anything. Found by a
+          # red-run harness on 2026-10-07.
+          SCAN=""
+          for d in src content; do [ -e "$d" ] && SCAN="$SCAN $d"; done
+          echo "scanning:$SCAN"
           PATTERN='USERNAME/REPO|example\.com|XX\.X|X M\+|< X ms|PLACEHOLDER|__[A-Z][A-Z0-9_]+__|[Cc]oming soon|TODO: replace|lorem ipsum'
           if grep -rInE "$PATTERN" \
                --include='*.ts' --include='*.tsx' --include='*.md' \
                --include='*.mdx' --include='*.json' \
-               src content 2>/dev/null; then
+               $SCAN; then
             echo
             echo "::error::Placeholder or template content found above."
             echo "Every claim on this site must be backed by a re-runnable source."
@@ -133,7 +141,7 @@ jobs:
         run: |
           set -uo pipefail
           UA='Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 Chrome/122 Safari/537.36'
-          grep -ohE '(github|demo): "https?://[^"]+"' src/data/projects.ts \
+          grep -ohE '(github|demo|evidence): "https?://[^"]+"' src/data/projects.ts \
             | sed -E 's/.*"(https?:[^"]+)"/\1/' | sort -u > /tmp/urls.txt
           echo "checking $(wc -l < /tmp/urls.txt) urls"
           FAIL=0
@@ -169,14 +177,33 @@ jobs:
           set -uo pipefail
           # each entry: 'regex|why'
           STALE=(
-            '\b32 VMs\b|superseded: vCenter reports 46 powered on of 53'
-            '~?607 GB|superseded: 608 GB total, 257 GB in use'
+            '\b32 VMs\b|superseded: vCenter reported 46 powered on of 53 on 2026-09, then 40 of 55 on 2026-10-07'
+            '~?607 GB RAM total, 455|superseded: the 2026-09-18 capacity note; current figures are read live'
+            '\b46 (powered-on )?VMs\b|superseded 2026-10-07: vCenter reports 40 powered on of 55'
+            'powered on of 53|superseded 2026-10-07: 55 defined'
+            '\b608 GB\b|superseded 2026-10-07: 607 GB total'
+            '\b257 GB\b|superseded 2026-10-07: 273 GB in use'
+            '\b76 scrape targets\b|superseded 2026-10-07: 77 targets'
+            '"76"|superseded 2026-10-07: 77 scrape targets'
+            '25\.8M|superseded 2026-10-07: 23.6M rows/hr'
+            '\b82 (alert )?signals\b|superseded 2026-10-07: 109 watchdog signals'
+            '"82"|superseded 2026-10-07: 109 watchdog signals'
+            '12\.74 ms|superseded 2026-10-07: etcd fsync p99 13.4 ms (prod, 1h window)'
+            '13\.63 ms|superseded 2026-10-07: etcd fsync p99 13.2 ms (dev, 1h window)'
+            '\b97 signals\b|superseded 2026-10-07: 109 watchdog signals'
+            '\b23 node_exporters\b|superseded 2026-10-07: 24 node_exporters'
+            '"21"[^}]*probe|superseded 2026-10-07: 22 blackbox probes'
           )
+          # Same grep-exits-2 trap as the placeholder check above: a missing
+          # path silently disabled this check from the day it was written.
+          SCAN=""
+          for d in src content; do [ -e "$d" ] && SCAN="$SCAN $d"; done
+          echo "scanning:$SCAN"
           RC=0
           for entry in "${STALE[@]}"; do
             pat="${entry%%|*}"; why="${entry##*|}"
             if grep -rInE "$pat" --include='*.ts' --include='*.tsx' \
-                 --include='*.md' --include='*.mdx' src content 2>/dev/null; then
+                 --include='*.md' --include='*.mdx' $SCAN; then
               echo "::error::Stale figure matching /$pat/ -- $why"
               RC=1
             fi

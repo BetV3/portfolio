@@ -13,6 +13,10 @@ interface ProjectCardProps {
   status?: string;
   /** Drives the status pill colour. */
   statusTone?: "live" | "complete" | "in-progress" | "design";
+  /** One or two headline figures, shown under the description. */
+  highlights?: { label: string; value: string }[];
+  /** e.g. "Solo" and "Sep 2026 to present". */
+  meta?: string;
 }
 
 const statusTones: Record<string, string> = {
@@ -31,6 +35,8 @@ export function ProjectCard({
   demo,
   status,
   statusTone,
+  highlights,
+  meta,
 }: ProjectCardProps) {
   return (
     <article className="card-glow group relative flex flex-col rounded-2xl border border-border/50 bg-card/50 p-6 transition-all hover:border-accent/30 hover:bg-card">
@@ -53,6 +59,19 @@ export function ProjectCard({
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
             {description}
           </p>
+          {meta && (
+            <p className="mt-2 text-xs text-muted-foreground/80">{meta}</p>
+          )}
+          {highlights && highlights.length > 0 && (
+            <dl className="mt-3 flex flex-wrap gap-x-5 gap-y-1">
+              {highlights.map((h) => (
+                <div key={h.label} className="flex items-baseline gap-1.5">
+                  <dd className="text-base font-semibold text-foreground">{h.value}</dd>
+                  <dt className="text-xs text-muted-foreground">{h.label}</dt>
+                </div>
+              ))}
+            </dl>
+          )}
         </div>
         <div className="flex-shrink-0">
           <div className="rounded-lg border border-border/50 bg-background/50 p-2">

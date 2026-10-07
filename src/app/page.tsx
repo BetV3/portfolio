@@ -1,20 +1,8 @@
 import Link from "next/link";
 import { ProjectCard } from "@/components/ProjectCard";
-import { SkillBadge } from "@/components/SkillBadge";
 import { getActiveSeries, getPostsBySeries, getAllPostsSorted } from "@/data/blog";
-import { getFeaturedProjects, statusLabel } from "@/data/projects";
-
-
-const skills = [
-  { name: "CI/CD", icon: null },
-  { name: "Infrastructure as Code", icon: null },
-  { name: "Data Pipelines", icon: null },
-  { name: "Networking", icon: null },
-  { name: "Observability", icon: null },
-  { name: "Containerization", icon: null },
-  { name: "Cloud (AWS)", icon: null },
-  { name: "System Design", icon: null },
-];
+import { cardHighlights, cardMeta, getFeaturedProjects, statusLabel } from "@/data/projects";
+import { recruiterFacts, siteStats, skillsToEvidence } from "@/data/site";
 
 export default function Home() {
   return (
@@ -32,22 +20,37 @@ export default function Home() {
           </div>
 
           <h1 className="text-4xl font-bold tracking-tight text-foreground sm:text-5xl lg:text-6xl">
-            Backend & Platform{" "}
-            <span className="text-accent">Engineer</span>
+            Backend, Platform &{" "}
+            <span className="text-accent">SRE</span> Engineer
           </h1>
 
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
-            I build and operate backend systems end to end: a monitoring SaaS
-            live in production, a Go gateway and a distributed log analyzer, all
-            running on a seven-host vSphere cluster I administer myself.
+            I build and operate systems end to end: a monitoring SaaS live in
+            production, three Kubernetes environments, an observability stack
+            and a fleet watchdog, all on a seven-host vSphere cluster I
+            administer myself. Looking for {recruiterFacts.roles.toLowerCase()}.
           </p>
+
+          <dl className="mt-8 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
+            {[
+              ["Location", `${recruiterFacts.location}. ${recruiterFacts.relocation}.`],
+              ["Work authorization", recruiterFacts.authorization],
+              ["Availability", recruiterFacts.availability],
+              ["Education", recruiterFacts.education],
+            ].map(([k, v]) => (
+              <div key={k} className="flex gap-2">
+                <dt className="shrink-0 text-muted-foreground">{k}:</dt>
+                <dd className="text-foreground">{v}</dd>
+              </div>
+            ))}
+          </dl>
 
           <div className="mt-10 flex flex-wrap gap-4">
             <a
-              href="/resume/"
+              href={recruiterFacts.resumePdf}
               className="inline-flex items-center justify-center rounded-full bg-accent px-6 py-3 text-sm font-semibold text-white shadow-sm transition-all hover:bg-accent-muted focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
             >
-              View Resume
+              Resume (PDF)
               <svg
                 className="ml-2 h-4 w-4"
                 fill="none"
@@ -87,17 +90,76 @@ export default function Home() {
               </svg>
               GitHub
             </a>
+            <a
+              href={recruiterFacts.linkedin}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-sm font-semibold text-foreground transition-all hover:bg-card hover:border-accent/30"
+            >
+              LinkedIn
+            </a>
+            <a
+              href={`mailto:${recruiterFacts.email}`}
+              className="inline-flex items-center justify-center rounded-full border border-border px-6 py-3 text-sm font-semibold text-foreground transition-all hover:bg-card hover:border-accent/30"
+            >
+              {recruiterFacts.email}
+            </a>
           </div>
         </div>
       </section>
 
-      {/* Skills Section */}
-      <section className="mx-auto max-w-5xl px-6 py-16 lg:px-8">
-        <div className="flex flex-wrap gap-3">
-          {skills.map((skill) => (
-            <SkillBadge key={skill.name} name={skill.name} icon={skill.icon} />
-          ))}
+      {/* At a glance: every number links to the page that proves it */}
+      <section className="mx-auto max-w-5xl px-6 py-12 lg:px-8">
+        <div className="mb-6 flex items-baseline justify-between gap-4">
+          <h2 className="text-xl font-semibold text-foreground">At a glance</h2>
+          <p className="text-xs text-muted-foreground">
+            Each figure names how and when it was read, and links to the page that backs it.
+          </p>
         </div>
+        <dl className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+          {siteStats.map((s) => (
+            <Link
+              key={s.label}
+              href={s.href}
+              className="card-glow group rounded-2xl border border-border/50 bg-card/50 p-5 transition-all hover:border-accent/30"
+            >
+              <dd className="text-2xl font-bold text-foreground group-hover:text-accent transition-colors">
+                {s.value}
+              </dd>
+              <dt className="mt-1 text-sm text-foreground">{s.label}</dt>
+              <dd className="mt-2 text-xs text-muted-foreground">Source: {s.source}</dd>
+            </Link>
+          ))}
+        </dl>
+      </section>
+
+      {/* Skills, each linked to the project that proves it */}
+      <section className="mx-auto max-w-5xl px-6 py-12 lg:px-8">
+        <div className="mb-6">
+          <h2 className="text-xl font-semibold text-foreground">Skills, with the proof</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Only skills that something on this site demonstrates. Each one links to the work.
+          </p>
+        </div>
+        <ul className="grid gap-x-8 gap-y-4 sm:grid-cols-2 lg:grid-cols-3">
+          {skillsToEvidence.map((s) => (
+            <li key={s.skill} className="text-sm">
+              <p className="font-medium text-foreground">{s.skill}</p>
+              <ul className="mt-1 space-y-0.5">
+                {s.proof.map((p) => (
+                  <li key={p.href + p.label}>
+                    <Link
+                      href={p.href}
+                      className="text-muted-foreground underline decoration-dotted underline-offset-2 hover:text-accent"
+                    >
+                      {p.label}
+                    </Link>
+                  </li>
+                ))}
+              </ul>
+            </li>
+          ))}
+        </ul>
       </section>
 
       {/* Featured Projects Section */}
@@ -108,7 +170,7 @@ export default function Home() {
               Featured Projects
             </h2>
             <p className="mt-2 text-muted-foreground">
-              Flagship work demonstrating system design and engineering depth.
+              The work I would want a hiring manager to read first. All of it is mine, end to end.
             </p>
           </div>
           <Link
@@ -144,6 +206,8 @@ export default function Home() {
               demo={project.demo}
               status={statusLabel[project.status]}
               statusTone={project.status}
+              highlights={cardHighlights(project)}
+              meta={cardMeta(project)}
             />
           ))}
         </div>
@@ -304,22 +368,25 @@ export default function Home() {
             </h2>
             <div className="mt-6 space-y-4 text-muted-foreground leading-relaxed">
               <p>
-                I&apos;m a backend and platform engineer. CS graduate from UT Dallas,
-                most useful in Go and Python, and happiest somewhere near the line
+                I&apos;m a backend and platform engineer who has drifted toward
+                reliability work. CS graduate from UT Dallas (August 2025), most
+                useful in Python and Go, and happiest somewhere near the line
                 between an application and the infrastructure it runs on.
               </p>
               <p>
                 Most of what I know came from running things rather than reading
                 about them. I operate a seven-host vSphere cluster at home, and the
-                projects on this site are deployed on it or on a VPS I pay for.
+                projects on this site are deployed on it or on a VPS I pay for,
                 which means I am also the one who gets paged when they break.
+                These are projects, not employment: I have not held a professional
+                engineering role yet, and the site does not pretend otherwise.
               </p>
               <p>
                 I try to keep the claims on this site matched to what the code
                 actually does. Where a project is unfinished, its page says so;
-                where there is a number, it was measured. The write-ups include
-                the incidents too, including the abuse of a signup endpoint on CheckPulse
-                taught me more than any of the features did.
+                where there is a number, it was measured and the page says how.
+                The write-ups include the incidents too. The abuse of a signup
+                endpoint on CheckPulse taught me more than any of the features did.
               </p>
             </div>
           </div>
@@ -332,11 +399,11 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Backend, platform, or infrastructure roles
+                  Backend, platform, infrastructure, SRE or DevOps roles
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Remote, or on-site anywhere in the US
+                  Remote, hybrid or on-site anywhere in the US; based in Plano, TX
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
@@ -356,11 +423,11 @@ export default function Home() {
               <ul className="mt-4 space-y-3 text-sm text-muted-foreground">
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Operating three Kubernetes environments on vSphere, dev through production
+                  Operating three Kubernetes environments, an observability stack and an internal CA on vSphere
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Hardening CheckPulse and getting it in front of agencies
+                  Closing the offsite-backup gap: every copy is still in one building
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
