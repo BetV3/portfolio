@@ -298,7 +298,7 @@ export default function ResumePage() {
                 </h3>
                 <p className="text-accent">Walmart Inc</p>
               </div>
-              <p className="text-sm text-muted-foreground">August 2020 to present</p>
+              <p className="text-sm text-muted-foreground">July 2023 to present</p>
             </div>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-3">
