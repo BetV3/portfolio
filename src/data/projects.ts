@@ -11,6 +11,10 @@ export interface ProjectMetric {
   label: string;
   value: string;
   subtext: string;
+  /** How the number was measured and when it was read. Shown under the card. */
+  source?: string;
+  /** A public artifact that reproduces or proves the figure. A specific file, not a repo root. */
+  evidence?: string;
 }
 
 export interface ProjectSection {
@@ -20,6 +24,25 @@ export interface ProjectSection {
   image?: string;
   imageAlt?: string;
   imageCaption?: string;
+}
+
+/**
+ * Recruiter-facing facts. Every field is optional so a project can leave out
+ * anything it cannot source: a missing timeframe is better than a guessed one.
+ */
+export interface ProjectRecruiterFacts {
+  /** e.g. "Solo: designed, built and operate" */
+  role: string;
+  /** Start to end or present, e.g. "Sep 2026 to present". Omit if unsourced. */
+  timeframe?: string;
+  /** Where the timeframe came from, e.g. "repo created 2026-03-24". */
+  timeframeSource?: string;
+  teamSize: string;
+  /** One line. Written before any architecture prose. */
+  outcome: string;
+  problem: string;
+  approach: string;
+  result: string;
 }
 
 export interface Project {
@@ -36,6 +59,7 @@ export interface Project {
   sections: ProjectSection[];
   featured?: boolean;
   order: number;
+  recruiter?: ProjectRecruiterFacts;
 }
 
 export const statusLabel: Record<ProjectStatus, string> = {
@@ -57,6 +81,24 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/UptimeBot",
     demo: "https://checkpulse.dev",
     order: 1,
+    recruiter: {
+      role:
+        "Solo: designed, built, deployed and operate",
+      timeframe:
+        "Mar 2026 to present",
+      timeframeSource:
+        "repo created 2026-03-24, last push 2026-10-04",
+      teamSize:
+        "1",
+      outcome:
+        "A monitoring SaaS running in production on a 1.9 GB VPS, with a documented abuse incident and the fix that closed it.",
+      problem:
+        "Agencies that manage client sites are contractually responsible for uptime but get paged for blips a single probe imagines.",
+      approach:
+        "Probes from three regions, an incident detector that needs two regions to agree, Celery workers sized to the memory the box actually has, and a Cloudflare tunnel so the host opens no ports.",
+      result:
+        "Deployed and public. Three real accounts, no paying customers, and a sender-reputation incident (about 1,191 bot signups) that I detected, root-caused and gated with Turnstile. The page says all of that plainly.",
+    },
     featured: true,
     tech: [
       { name: "FastAPI", category: "API" },
@@ -72,7 +114,7 @@ export const projects: Project[] = [
       { label: "Regions", value: "3", subtext: "US / EU / Asia probes" },
       { label: "Consensus", value: "2+", subtext: "regions must agree to alert" },
       { label: "Alert channels", value: "5", subtext: "Slack, Discord, Telegram, email, webhook" },
-      { label: "Containers", value: "7", subtext: "on a single 1.9 GB VPS" },
+      { label: "Containers", value: "7", subtext: "on a single 1.9 GB VPS", source: "docker compose ps on the VPS", evidence: "https://github.com/BetV3/UptimeBot" },
     ],
     sections: [
       {
@@ -124,6 +166,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "amber",
     order: 2,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "first release 18 Sep 2026, operational notes",
+      teamSize:
+        "1",
+      outcome:
+        "Replaced an alerting path that missed 969 of 970 failures with one that runs outside the thing it watches and has been proven to fire.",
+      problem:
+        "A scheduled job failed 970 times in a row over four days and alerted once, because the alerting lived inside the runtime that was failing.",
+      approach:
+        "A small Python watchdog on a separate host under system cron, stable alert IDs, dedupe and recovery messages, a second host watching the watchdog, and every signal red-run before it was trusted.",
+      result:
+        "109 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
+    },
     featured: true,
     tech: [
       { name: "Python", category: "Language" },
@@ -139,6 +199,7 @@ export const projects: Project[] = [
         label: "Silent failure streak",
         value: "970",
         subtext: "consecutive failed runs over four days, one alert on the first",
+        source: "counted from the scheduler's execution log, 18 Sep 2026",
       },
       {
         label: "Same bug, different layers",
@@ -147,13 +208,16 @@ export const projects: Project[] = [
       },
       {
         label: "Signals watched",
-        value: "23",
-        subtext: "5 HTTP, 6 SSH, 11 DNS/keepalived, plus every cron job's last run",
+        value: "109",
+        subtext: "23 at first release (18 Sep 2026); 109 fleet-wide now",
+        source: "watchdog.py --list, read 7 Oct 2026",
+        evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
       },
       {
         label: "Dead man's threshold",
         value: "20 min",
         subtext: "~4 missed runs before the other host reports the watchdog gone",
+        source: "the deadman script's threshold; tested by backdating the state file, 18 Sep 2026",
       },
     ],
     sections: [
@@ -178,7 +242,7 @@ export const projects: Project[] = [
         heading: "What I built",
         body: [
           "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
-          "It covers 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Alerts go to Discord. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 109 signals as of 7 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
           "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
           "It caught a real cron drift failure on its first run.",
         ],
@@ -217,6 +281,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "sky",
     order: 3,
+    recruiter: {
+      role:
+        "Solo: audited, repaired and tested an existing pair",
+      timeframe:
+        "Sep 2026",
+      timeframeSource:
+        "repair and failover test 18 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Found silent replication drift and two health checks that could not fail, fixed them, and proved failover with a timed test.",
+      problem:
+        "Two DNS servers behind a virtual IP that had been flapping 13 times in 30 days while serving different answers, with a health check that only noticed a dead process.",
+      approach:
+        "Compared zone data and serials on both nodes, measured what dig actually exits with, wrote a check that validates the answer's shape, then stopped the authoritative server on purpose and watched.",
+      result:
+        "Zones at serial parity, VIP released in about 4 seconds under a real failure, 20 of 20 probes answered through it. One self-inflicted 2h20m outage, root-caused from the journal and written up.",
+    },
     tech: [
       { name: "PowerDNS Recursor", category: "Client-facing resolver" },
       { name: "PowerDNS Authoritative", category: "Internal zones" },
@@ -230,16 +312,19 @@ export const projects: Project[] = [
         label: "Failover probes",
         value: "20/20",
         subtext: "correct answers during an induced failover",
+        source: "a dig loop against the VIP every 2 s for 40 s, 18 Sep 2026",
       },
       {
         label: "VIP release",
         value: "~4 s",
         subtext: "from check failure to keepalived FAULT",
+        source: "keepalived journal timestamps during the test, 18 Sep 2026",
       },
       {
         label: "VIP moves",
         value: "13",
-        subtext: "keepalived state transitions in 30 days",
+        subtext: "keepalived state transitions in the 30 days before the repair",
+        source: "journalctl -u keepalived on both nodes, 18 Sep 2026",
       },
       {
         label: "Broken health checks",
@@ -320,6 +405,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "violet",
     order: 4,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "first nightly run and restore test 18 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Took five databases from zero copies to nightly restic snapshots on separate hardware, and proved a restore by counting rows out of it.",
+      problem:
+        "One database had a backup. Conversation state, working directories and the task queue had none, and the host they lived on was a single physical machine.",
+      approach:
+        "restic to a host on a different hypervisor, consistent SQLite snapshots through the .backup API, fresh Postgres dumps per run, a retention policy, and a scripted restore that asserts on row counts rather than file presence.",
+      result:
+        "Restore returned 9,849 messages across 316 sessions with integrity ok. The verifier later caught a 0-byte token in a Kubernetes backup that had reported success. No offsite copy yet, stated on the page.",
+    },
     tech: [
       { name: "restic", category: "Backup engine" },
       { name: "PostgreSQL", category: "Dumped databases" },
@@ -337,6 +440,7 @@ export const projects: Project[] = [
         label: "Restore test",
         value: "9,849",
         subtext: "messages read back out of a restored copy, across 316 sessions",
+        source: "SELECT count(*) on the restored SQLite file, 18 Sep 2026",
       },
       {
         label: "Dead man's switch",
@@ -404,6 +508,24 @@ export const projects: Project[] = [
     accent: "blue",
     github: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer",
     order: 5,
+    recruiter: {
+      role:
+        "Solo: designed and built",
+      timeframe:
+        "Jan 2025",
+      timeframeSource:
+        "repo created 2025-01-08",
+      teamSize:
+        "1",
+      outcome:
+        "A Go master-worker log parser that cut a 10M-line job from 36 s to 6 s, with the scaling ceiling measured rather than guessed.",
+      problem:
+        "Parsing a 3.3 GB access log on one core takes long enough to be worth distributing, but distributing it badly makes it slower.",
+      approach:
+        "A master splits the file into byte ranges and hands them to workers over gRPC; workers parse and return status-code counts the master merges. Profiled and tuned buffers to find where the speedup stops.",
+      result:
+        "Near-linear scaling to about 8 workers, flat after that because the job becomes I/O and coordination bound. Adding workers past the knee makes it slower.",
+    },
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -414,8 +536,8 @@ export const projects: Project[] = [
     metrics: [
       { label: "Input size", value: "3.3 GB", subtext: "single access log" },
       { label: "Lines", value: "10M+", subtext: "parsed per run" },
-      { label: "Single worker", value: "36 s", subtext: "measured baseline" },
-      { label: "8-11 workers", value: "6 s", subtext: "~6x speedup" },
+      { label: "Single worker", value: "36 s", subtext: "measured baseline", source: "timed run recorded in the repo README, Jan 2025", evidence: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer" },
+      { label: "8-11 workers", value: "6 s", subtext: "~6x speedup", source: "timed run recorded in the repo README, Jan 2025", evidence: "https://github.com/BetV3/Distributed-Multithreaded-Log-Analyzer" },
     ],
     sections: [
       {
@@ -444,6 +566,24 @@ export const projects: Project[] = [
     accent: "orange",
     github: "https://github.com/BetV3/apigateway",
     order: 6,
+    recruiter: {
+      role:
+        "Solo: designed and built",
+      timeframe:
+        "Feb 2026",
+      timeframeSource:
+        "repo created 2026-02-03",
+      teamSize:
+        "1",
+      outcome:
+        "A from-scratch Go gateway with an explicit middleware chain, two-layer rate limiting and Prometheus metrics, and a stated trade-off instead of a fake benchmark.",
+      problem:
+        "Understanding what a gateway actually has to do, rather than configuring one.",
+      approach:
+        "Request IDs, structured logging, JWT auth with RBAC, in-memory rate limiting that falls back to Redis for limits shared across replicas, round-robin balancing across healthy backends.",
+      result:
+        "Complete and on GitHub. No requests-per-second or p99 figures, because I have not load tested it on hardware I would quote.",
+    },
     featured: true,
     tech: [
       { name: "Go", category: "Language" },
@@ -485,6 +625,24 @@ export const projects: Project[] = [
     accent: "cyan",
     github: "https://github.com/BetV3/talos-platform",
     order: 7,
+    recruiter: {
+      role:
+        "Solo: design",
+      timeframe:
+        "May 2026",
+      timeframeSource:
+        "repo created 2026-05-23",
+      teamSize:
+        "1",
+      outcome:
+        "A design package (failure model, IP plan, placement map, failure-test catalogue, secrets policy) for three immutable Kubernetes clusters.",
+      problem:
+        "Talos has no shell, so configuration has to be right before a machine boots. That makes the plan the actual deliverable.",
+      approach:
+        "Write the architecture, the IP plan and the failure tests first, and keep generated secrets out of git by policy.",
+      result:
+        "Design only. The three environments I actually run today are RKE2 (see the three-environment platform page); the Talos design informed their IP plan and placement rules.",
+    },
     tech: [
       { name: "Talos Linux", category: "OS" },
       { name: "Kubernetes", category: "Orchestration" },
@@ -525,6 +683,24 @@ export const projects: Project[] = [
     accent: "purple",
     github: "https://github.com/BetV3/data-pipeline",
     order: 8,
+    recruiter: {
+      role:
+        "Solo: building",
+      timeframe:
+        "Jan 2026 to present",
+      timeframeSource:
+        "repo created 2026-01-26",
+      teamSize:
+        "1",
+      outcome:
+        "A Kafka pipeline built in explicit tiers so the page can say exactly which reliability work is done.",
+      problem:
+        "Event pipelines are easy to describe as handling millions of events a day and hard to actually make reliable.",
+      approach:
+        "Four tiers: tracer bullet first, then dead letter queue, schema evolution and backpressure, then multi-source ingestion, then reliability drills and SLOs.",
+      result:
+        "Tier 0 works; tier 1 is partly built (producer, consumer, metrics). No throughput numbers until tier 3 produces them.",
+    },
     tech: [
       { name: "Apache Kafka", category: "Streaming" },
       { name: "Python", category: "ETL" },
@@ -559,6 +735,24 @@ export const projects: Project[] = [
     accent: "amber",
     github: "https://github.com/BetV3/cloud-infrastructure-pipeline",
     order: 9,
+    recruiter: {
+      role:
+        "Solo: built",
+      timeframe:
+        "Jan 2026 to Sep 2026",
+      timeframeSource:
+        "repo created 2026-01-25, last push 2026-09-21",
+      teamSize:
+        "1",
+      outcome:
+        "Terraform modules for AWS environments with a CI workflow that plans and applies them.",
+      problem:
+        "Provisioning cloud environments reproducibly instead of from a laptop.",
+      approach:
+        "Terraform modules plus a GitHub Actions workflow that runs format, validate, plan and apply.",
+      result:
+        "A working early module set, listed at its real size. The apply path depends on an AWS account that is not currently active.",
+    },
     tech: [
       { name: "Terraform", category: "IaC" },
       { name: "AWS", category: "Cloud" },
@@ -585,6 +779,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "pink",
     order: 10,
+    recruiter: {
+      role:
+        "Solo: own and administer",
+      timeframe:
+        "Nov 2024 to present",
+      timeframeSource:
+        "Homelab_Scripts repo created 2024-11-16",
+      teamSize:
+        "1",
+      outcome:
+        "A seven-host vSphere cluster (132 cores, 607 GB RAM, 40 VMs powered on) that runs everything else on this site, operated through the API with a scoped service account.",
+      problem:
+        "Every project on this site needs somewhere to run, and I wanted to be the person who gets paged when it breaks.",
+      approach:
+        "vCenter 8 managed through govc and the API, a least-privilege automation account scoped to one folder, Cloudflare tunnels instead of port forwarding, and measured hardware limits instead of spec sheets.",
+      result:
+        "The substrate for three Kubernetes environments, the observability stack, the CI platform and the internal CA. Capacity figures on this page are read from the API, not estimated.",
+    },
     tech: [
       { name: "VMware vSphere 8", category: "Hypervisor" },
       { name: "vCenter", category: "Management" },
@@ -593,16 +805,16 @@ export const projects: Project[] = [
       { name: "Linux", category: "Guests" },
     ],
     metrics: [
-      { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01" },
-      { label: "CPU cores", value: "132", subtext: "aggregate physical" },
-      { label: "Memory", value: "608 GB", subtext: "257 GB in use (42%)" },
-      { label: "VMs", value: "46", subtext: "powered on of 53, read from the vCenter API" },
+      { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "CPU cores", value: "132", subtext: "aggregate physical", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "Memory", value: "607 GB", subtext: "273 GB in use (45%)", source: "vCenter quickStats, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "VMs", value: "40", subtext: "powered on of 55 defined", source: "vCenter API, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
     ],
     sections: [
       {
         heading: "What it is",
         body: [
-          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 608 GB of RAM, of which 257 GB is actually in use. It currently runs 46 powered-on VMs out of 53 defined. These figures were read from the vCenter API, not estimated.",
+          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 607 GB of RAM, of which 273 GB is actually in use. It currently runs 40 powered-on VMs out of 55 defined. These figures were read from the vCenter API on 7 October 2026, not estimated, and the script that reads them is in the linked repository.",
           "It is the substrate for the Talos platform, the data pipeline, and the build and automation hosts behind my other projects.",
         ],
       },
@@ -623,7 +835,7 @@ export const projects: Project[] = [
         heading: "What the hardware can and cannot do",
         body: [
           "Capacity planning on used enterprise hardware needs measurement, not spec sheets. Guests here report no AVX2, which looks like an EVC baseline masking it. It is not. The hosts are Sandy Bridge and Ivy Bridge, and AVX2 arrived with Haswell, so the instruction set is physically absent and no cluster setting can expose it.",
-          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 7 percent CPU with 42 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
+          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 8 percent CPU with 45 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
           "The scripts that produced those measurements are in the linked repository, so the claim is checkable rather than asserted.",
         ],
       },
@@ -633,7 +845,7 @@ export const projects: Project[] = [
           "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
           "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
         ],
-        image: "/infrastructure-map.62202ddb.svg",
+        image: "/infrastructure-map.6eed3be0.svg",
         imageAlt:
           "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
         imageCaption:
@@ -651,6 +863,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "emerald",
     order: 11,
+    recruiter: {
+      role:
+        "Solo: designed, provisioned and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "clusters built 20 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "Three RKE2 clusters (15 nodes) on bare vSphere with control-plane VIPs, provisioned from the API, with failover proven by forcing a leadership transfer.",
+      problem:
+        "A single cluster is not a platform. Dev, staging and production need to exist separately, be rebuildable, and survive losing a control-plane node.",
+      approach:
+        "Nodes created with govc and cloud-init through guestinfo, kube-vip for the API, Cilium, ingress on pinned NodePorts, restore-tested etcd and token backups, and a failover test that was redone after the first one proved nothing.",
+      result:
+        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, etcd fsync p99 inside budget and trended. One constraint stated plainly: the three share one VLAN.",
+    },
     featured: true,
     tech: [
       { name: "RKE2 v1.36.4", category: "Kubernetes" },
@@ -661,10 +891,10 @@ export const projects: Project[] = [
       { name: "govc / cloud-init", category: "Provisioning" },
     ],
     metrics: [
-      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6" },
-      { label: "Nodes Ready", value: "15/15", subtext: "across all three" },
-      { label: "etcd fsync p99", value: "12.74 ms", subtext: "prod, against a 25 ms budget" },
-      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer" },
+      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "etcd fsync p99", value: "13.4 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/failover-test-that-proved-nothing" },
     ],
     sections: [
       {
@@ -673,7 +903,7 @@ export const projects: Project[] = [
           "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo. No DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
-        image: "/diagram-k8s-environments.d5356cc8.svg",
+        image: "/diagram-k8s-environments.c1cd61d8.svg",
         imageAlt:
           "Three Kubernetes clusters: dev with six nodes, staging with three and a single etcd member, production with six and three etcd members. Each has a kube-vip virtual IP in front of its API. All three share one VLAN.",
         imageCaption:
@@ -710,11 +940,29 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py",
     title: "Fleet Observability",
     tagline:
-      "76 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
+      "77 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
     category: "Infrastructure",
     status: "live",
     accent: "cyan",
     order: 12,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "built 21 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "A VictoriaMetrics, vmagent and Grafana stack over 77 targets that is deliberately not an alerting path, with every dashboard panel verified to return data.",
+      problem:
+        "The watchdog says what is broken. Nothing said why, and the one number that mattered most (etcd disk latency) had only been spot checked.",
+      approach:
+        "A collector outside the clusters it watches, a least-privilege scraping ServiceAccount per cluster, etcd metrics exposed with a rolling control-plane restart, a persistent remote-write queue proven by stopping the database, and no Alertmanager.",
+      result:
+        "77 of 77 targets up, 23.6M rows an hour, 30 panels verified by executing their queries, and a label-join bug found by that verification. Zero samples lost across a 100 s backend outage.",
+    },
     tech: [
       { name: "VictoriaMetrics", category: "TSDB" },
       { name: "vmagent", category: "Scraping" },
@@ -724,10 +972,10 @@ export const projects: Project[] = [
       { name: "vmware_exporter", category: "Hypervisor metrics" },
     ],
     metrics: [
-      { label: "Scrape targets", value: "76", subtext: "all up at time of writing" },
-      { label: "Ingest rate", value: "25.8M/hr", subtext: "samples into VictoriaMetrics" },
-      { label: "Dashboard panels", value: "30", subtext: "every one verified to return real series" },
-      { label: "Alert signals", value: "82", subtext: "in the watchdog, not in Grafana" },
+      { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
+      { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
+      { label: "Alert signals", value: "109", subtext: "in the watchdog, not in Grafana", source: "watchdog.py --list on the watchdog host, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
@@ -748,7 +996,7 @@ export const projects: Project[] = [
         heading: "A metric that changed what I believed about the storage",
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
-          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile at 13.63 ms on dev and 12.74 ms on production, against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 13.2 ms on dev and 13.4 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
           "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },
@@ -765,7 +1013,7 @@ export const projects: Project[] = [
           "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals, including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
-        image: "/diagram-observability.c7e27967.svg",
+        image: "/diagram-observability.7b9d6fde.svg",
         imageAlt:
           "Scrape targets feed vmagent, which writes to VictoriaMetrics and is read by Grafana. The watchdog runs entirely separately and is the only path to an alert. No line connects the two systems.",
         imageCaption:
@@ -783,6 +1031,24 @@ export const projects: Project[] = [
     status: "live",
     accent: "rose",
     order: 13,
+    recruiter: {
+      role:
+        "Solo: designed, built and operate",
+      timeframe:
+        "Sep 2026 to present",
+      timeframeSource:
+        "tunnel created 20 Sep 2026",
+      teamSize:
+        "1",
+      outcome:
+        "An on-premise Kubernetes cluster reachable from the internet with zero inbound ports, staged so the live site stayed untouched as the rollback.",
+      problem:
+        "Serving from the home cluster without exposing a home IP, and without risking the site recruiters actually visit.",
+      approach:
+        "A separate Cloudflare tunnel with its own credentials, a connector on a control-plane node dialling out, ingress on a pinned NodePort, the apex record protected by the deploy script, and layered checks ending with the public hostname answering.",
+      result:
+        "Public traffic reaches my ingress through the tunnel (the first success was a 404 from my own nginx). 4 connections healthy, 22 synthetic probes, certificate expiry graphed for every endpoint.",
+    },
     tech: [
       { name: "Cloudflare Tunnel", category: "Ingress" },
       { name: "cloudflared", category: "Connector" },
@@ -791,9 +1057,9 @@ export const projects: Project[] = [
       { name: "PowerDNS", category: "Internal DNS" },
     ],
     metrics: [
-      { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere" },
-      { label: "Tunnel connections", value: "4", subtext: "healthy at time of writing" },
-      { label: "Probe coverage", value: "21", subtext: "ICMP, DNS, HTTP and TCP checks" },
+      { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere", source: "design fact: the connector dials out; nothing listens publicly", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
+      { label: "Tunnel connections", value: "4", subtext: "healthy, read 7 Oct 2026", source: "Cloudflare tunnel API, via the edge watchdog signal", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
+      { label: "Probe coverage", value: "22", subtext: "ICMP 9, HTTP 6, TCP 4, DNS 3", source: "blackbox_exporter targets in vmagent, read 7 Oct 2026" },
     ],
     sections: [
       {
