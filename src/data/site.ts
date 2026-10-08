@@ -42,7 +42,7 @@ export const siteStats: SiteStat[] = [
     href: "/projects/k8s-three-environments",
   },
   {
-    value: "111",
+    value: "115",
     label: "monitored signals in a watchdog I wrote",
     source: "the watchdog's signal registry, 8 Oct 2026",
     href: "/projects/fleet-watchdog",

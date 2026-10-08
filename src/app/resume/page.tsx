@@ -89,7 +89,7 @@ export default function ResumePage() {
                 <span>
                   Wrote a fleet watchdog (Python, system cron, separate host) after
                 a scheduled job failed 970 consecutive times with one alert;
-                now 111 signals with stable IDs, dedupe, recovery messages and a
+                now 115 signals with stable IDs, dedupe, recovery messages and a
                 dead man&apos;s switch, each red-run before being trusted.
                 (<Link className="underline decoration-dotted" href="/projects/fleet-watchdog">details</Link>)
                 </span>

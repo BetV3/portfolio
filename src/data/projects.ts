@@ -182,7 +182,7 @@ export const projects: Project[] = [
       approach:
         "A small Python watchdog on a separate host under system cron, stable alert IDs, dedupe and recovery messages, a second host watching the watchdog, and every signal red-run before it was trusted.",
       result:
-        "111 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
+        "115 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
     },
     featured: true,
     tech: [
@@ -208,8 +208,8 @@ export const projects: Project[] = [
       },
       {
         label: "Signals watched",
-        value: "111",
-        subtext: "23 at first release (18 Sep 2026); 111 fleet-wide now",
+        value: "115",
+        subtext: "23 at first release (18 Sep 2026); 115 fleet-wide now",
         source: "the watchdog's signal registry, read 8 Oct 2026",
         evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
       },
@@ -249,7 +249,7 @@ export const projects: Project[] = [
         heading: "What I built",
         body: [
           "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
-          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 111 signals as of 8 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 115 signals as of 8 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
           "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
           "It caught a real cron drift failure on its first run.",
         ],
@@ -992,7 +992,7 @@ export const projects: Project[] = [
       { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
       { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
-      { label: "Alert signals", value: "111", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 8 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
+      { label: "Alert signals", value: "115", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 8 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
@@ -1194,6 +1194,128 @@ export const projects: Project[] = [
         ],
       },
     ],
+  },
+  {
+    slug: "gitops-signed-supply-chain",
+    github: "https://github.com/BetV3/k8s-gitops",
+    title: "GitOps and a Signed-Image Gate on Three Clusters",
+    tagline: "Flux reconciling dev, staging and production from one public repo, with Kyverno refusing any image not signed by a GitHub Actions workflow in my org. Every gate was proven able to fail before it was trusted.",
+    category: "Infrastructure / Platform",
+    status: "live",
+    accent: "emerald",
+    order: 18,
+    featured: true,
+    recruiter: {
+      role: "Solo: designed, built and operate",
+      timeframe: "Oct 2026 to present",
+      timeframeSource: "repo created and all three clusters bootstrapped 8 Oct 2026",
+      teamSize: "1",
+      outcome: "Three RKE2 clusters reconciled by Flux from a single repository, every overlay schema-validated in CI, and a keyless cosign policy enforced at admission on all three, including production.",
+      problem: "The clusters were built by hand and operated by kubectl. A certificate SAN that was typed into two control planes incorrectly went unnoticed for nine days. Nothing in the clusters had a source of truth, and nothing checked what was allowed to run.",
+      approach: "Import the live workloads into git with a kubectl diff of zero, bootstrap Flux per cluster with read-only deploy keys, chain infra, policies and apps with health checks, vendor Kyverno and write one keyless verifyImages policy, and build a separate CI pipeline that signs an image with GitHub OIDC so the policy has something real to verify.",
+      result: "Drift repaired in 3 to 4 seconds on an idle cluster. An unsigned image rejected at admission on dev and on production; a signed one admitted and rewritten to its digest. Eight validator red-run cases and nine watchdog red cases, all failing as required. Two Flux behaviours the design did not predict, found by the tests and written down."
+    },
+    tech: [
+      {
+        name: "Flux v2.9",
+        category: "Reconciler"
+      },
+      {
+        name: "Kustomize",
+        category: "Overlays"
+      },
+      {
+        name: "Kyverno v1.19",
+        category: "Admission policy"
+      },
+      {
+        name: "cosign (keyless)",
+        category: "Signing"
+      },
+      {
+        name: "Sigstore Fulcio and Rekor",
+        category: "Identity and transparency log"
+      },
+      {
+        name: "syft (SPDX)",
+        category: "SBOM attestation"
+      },
+      {
+        name: "kubeconform",
+        category: "Schema validation"
+      },
+      {
+        name: "GitHub Actions OIDC",
+        category: "Workload identity"
+      }
+    ],
+    metrics: [
+      {
+        label: "Clusters under Flux",
+        value: "3/3",
+        subtext: "dev, staging, production; 4 Kustomizations each, all Ready at one revision",
+        source: "flux get kustomizations per cluster, 8 Oct 2026",
+        evidence: "https://github.com/BetV3/k8s-gitops/tree/main/clusters"
+      },
+      {
+        label: "Drift repaired",
+        value: "3 s",
+        subtext: "kubectl scale 1 to 3 reverted; deleted Service recreated in 4 s; git-removed object pruned in 63 s",
+        source: "tests/drift_redgreen.sh on the dev cluster, idle, 8 Oct 2026",
+        evidence: "https://github.com/BetV3/k8s-gitops/blob/main/tests/drift_redgreen.sh"
+      },
+      {
+        label: "Unsigned image",
+        value: "rejected",
+        subtext: "at admission on dev and on production; signed image admitted and rewritten to its digest",
+        source: "tests/admission_redgreen.sh against both clusters, 8 Oct 2026",
+        evidence: "https://github.com/BetV3/k8s-gitops/blob/main/tests/admission_redgreen.sh"
+      },
+      {
+        label: "Gates proven to fail",
+        value: "8 + 9",
+        subtext: "validator red-run cases in CI, watchdog red cases; each must fail or the suite fails",
+        source: "tests/redrun_validate.sh (CI) and test_gitops_signal.py",
+        evidence: "https://github.com/BetV3/k8s-gitops/blob/main/tests/redrun_validate.sh"
+      },
+      {
+        label: "Rekor log index",
+        value: "3150687989",
+        subtext: "the signed image's entry in the public transparency log, verifiable with no credentials",
+        source: "cosign verify from a machine with no registry access, 8 Oct 2026",
+        evidence: "https://github.com/BetV3/hello-signed"
+      }
+    ],
+    sections: [
+      {
+        heading: "What it is",
+        body: [
+          "One public repository holds the desired state for all three clusters. Each cluster has a directory of Flux Kustomizations that chain infra, then policies, then apps, each with prune and wait enabled, so a file deleted from git deletes the object and a Kustomization is only Ready when the rollout finished. Each cluster bootstrapped with its own read-only deploy key; Flux can pull and cannot push.",
+          "The first commit imported what was already running. kube-state-metrics was exported from the live dev cluster, stripped of server-set fields, and committed only after kubectl diff reported no difference. From that commit on, Flux owns it, and the ownership labels on the live object say so.",
+          "A separate repository builds a tiny image in GitHub Actions, signs it with cosign using the workflow's OIDC token (no key to leak), and attaches an SPDX SBOM as an attestation. The Kyverno policy on the clusters accepts only images whose certificate was issued to a workflow under my GitHub org, recorded in Rekor, and rewrites the tag to the verified digest so the thing that was verified is the thing that runs."
+        ]
+      },
+      {
+        heading: "Nothing was trusted until it had failed",
+        body: [
+          "The CI validator builds every overlay with kustomize and checks it against the Kubernetes 1.36 schema in strict mode, then enforces policy: no latest tags, production images pinned by digest, prune and wait on every Flux object. On its own that is a script that prints PASS. So the same pipeline runs a harness that breaks a copy of the tree eight different ways, an unknown field, broken YAML, a latest tag, an unpinned production image, prune switched off, wait removed, an em dash in prose, and asserts the validator fails each time. Two of the eight did not fail on the first run. Both were bugs in the validator, and the harness is why they were found before the validator was guarding anything.",
+          "The admission policy got the same treatment on dev and then on production: a deliberately unsigned copy of the base image, published under the same registry path, is refused with no signatures found; the signed image is admitted and its pod spec comes back carrying the digest. The watchdog signals for all of this have nine red cases of their own, including the quiet one where every Kustomization is Ready but two of them are on different commits."
+        ]
+      },
+      {
+        heading: "Two things the tests found that I did not design for",
+        body: [
+          "With infra, policies and apps all reconciling every minute, the drift test failed: a deleted Service was not recreated inside two minutes. Reading the controller log, every infra reconcile flipped it to Unknown for about a second while 76 Kyverno objects were server-side applied, policies then saw its dependency not ready and backed off thirty seconds, and apps behind it waited again. A one-minute interval on a chain of three is not a one-minute repair time. Infra and policies now reconcile every ten minutes and apps every minute.",
+          "The second one is a Flux behaviour worth knowing before relying on it. A deletion that lands while Flux is inside a health check is not repaired until that check times out. Flux waits on the inventory it just applied and does not re-apply mid-wait. The log says it plainly: health check failed after 3m0s, Service status NotFound, recreated on the following run. So the worst-case repair time is the health-check timeout plus the interval, not the interval. The drift test now waits for the Kustomization to be idle before each case, and the numbers it reports are the idle-cluster figures."
+        ]
+      },
+      {
+        heading: "Honest status",
+        body: [
+          "The policy covers two namespaces, not the whole cluster, because the clusters also run things I have not signed yet. Kyverno has deprecated the ClusterPolicy kind I used in favour of its CEL-based ImageValidatingPolicy; migrating is a known follow-up. The RKE2 node configuration, where the certificate bug that started all this actually lived, is still outside git. And this is one workload on a lab, not a fleet of services. What is real is that every claim on this page has a script that reproduces it and a log that recorded it."
+        ]
+      }
+    ]
   },
   {
     slug: "dev-platform",
