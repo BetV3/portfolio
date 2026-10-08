@@ -48,7 +48,7 @@ export const series: BlogSeries[] = [
     id: "things-that-lied",
     title: "Checks That Lied",
     description:
-      "Three times a green signal meant nothing: a backup that restored an empty file, a failover test that proved the opposite of what it claimed, and a runbook that had never once worked.",
+      "Four times a green signal meant nothing: a backup that restored an empty file, a failover test that proved the opposite of what it claimed, a runbook that had never once worked, and a monitor that said the API was fine through a VIP it never used.",
     color: "red",
   },
   {
@@ -62,8 +62,22 @@ export const series: BlogSeries[] = [
 
 export const posts: BlogPost[] = [
   // ============================================
-  // CHECKS THAT LIED (3 posts)
+  // CHECKS THAT LIED (4 posts)
   // ============================================
+  {
+    slug: "monitor-that-never-used-the-vip",
+    published: true,
+    title: "The Monitor That Said the VIP Was Fine Without Using It",
+    description:
+      "The production Kubernetes API was unreachable through its virtual IP for 9 days 8 hours 43 minutes. The signal named 'API via VIP' stayed green the whole time, because it ran on a control plane and talked to localhost.",
+    date: "2026-10-08",
+    category: "Operations",
+    readTime: "7 min read",
+    series: "things-that-lied",
+    seriesOrder: 4,
+    tags: ["Kubernetes", "TLS", "Monitoring", "Incident"],
+    featured: true,
+  },
   {
     slug: "backup-that-restored-nothing",
     published: true,
@@ -76,7 +90,6 @@ export const posts: BlogPost[] = [
     series: "things-that-lied",
     seriesOrder: 1,
     tags: ["Kubernetes", "Backups", "etcd", "Incident"],
-    featured: true,
   },
   {
     slug: "failover-test-that-proved-nothing",

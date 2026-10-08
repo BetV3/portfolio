@@ -182,7 +182,7 @@ export const projects: Project[] = [
       approach:
         "A small Python watchdog on a separate host under system cron, stable alert IDs, dedupe and recovery messages, a second host watching the watchdog, and every signal red-run before it was trusted.",
       result:
-        "109 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
+        "111 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
     },
     featured: true,
     tech: [
@@ -208,10 +208,17 @@ export const projects: Project[] = [
       },
       {
         label: "Signals watched",
-        value: "109",
-        subtext: "23 at first release (18 Sep 2026); 109 fleet-wide now",
-        source: "the watchdog's signal registry, read 7 Oct 2026",
+        value: "111",
+        subtext: "23 at first release (18 Sep 2026); 111 fleet-wide now",
+        source: "the watchdog's signal registry, read 8 Oct 2026",
         evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
+      },
+      {
+        label: "Longest miss",
+        value: "9d 8h",
+        subtext: "prod API unreachable through its VIP while the API signal stayed green",
+        source: "kube-vip lease acquireTime 29 Sep 2026 to first verified ok 8 Oct 2026",
+        evidence: "/blog/monitor-that-never-used-the-vip",
       },
       {
         label: "Dead man's threshold",
@@ -242,7 +249,7 @@ export const projects: Project[] = [
         heading: "What I built",
         body: [
           "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
-          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 109 signals as of 7 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 111 signals as of 8 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
           "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
           "It caught a real cron drift failure on its first run.",
         ],
@@ -260,6 +267,15 @@ export const projects: Project[] = [
           "Every failure above reported success, so I did not take the watchdog's word for its own behaviour either.",
           "I injected a deliberately dead check. The alert fired exactly once. The second run stayed silent, so a stuck problem does not turn into repeat spam. Removing the check produced exactly one recovery message. I then backdated the watchdog's state file to exercise the dead man's switch and got the same three results: one alert, silence on the second run, exactly one recovery.",
           "The observability plugin got the same treatment. I counted rows in ClickHouse before and after a real agent turn, and the count went from 1 to 3. Reading enabled in the plugin list is what fooled me the first time, so the fix does not count until data lands somewhere I can count it.",
+        ],
+      },
+      {
+        heading: "The one it missed",
+        body: [
+          "On 8 October 2026 I found the production Kubernetes API had been unreachable through its virtual IP for 9 days, 8 hours and 43 minutes. Two of the three control planes had been joined without the VIP in their certificate's Subject Alternative Names, and the VIP had moved to one of them on 29 September. Every kubeconfig failed with an x509 error from that moment.",
+          "The watchdog's signal for this was labelled prod API (via VIP) and stayed green the entire time. It ran kubectl on a control plane against that node's local kubeconfig, which points at 127.0.0.1. It was asking a node whether the node was fine. The label said VIP and the code never touched it. The metrics stack was green too, because its scraper skipped certificate verification and so could not see a certificate failure.",
+          "The fix added the SAN block to both nodes with a rolling restart measured through the VIP at half-second resolution (153 s of outage ended, then one 6.4 s blip as the holder's API server came back). The API signal now goes through the VIP explicitly, a new signal checks every control plane's served certificate for the VIP, and the scraper verifies against the cluster CA. The new signal shipped with a test that fakes the exact state I found and asserts the signal goes red.",
+          "I am listing this under the watchdog rather than hiding it because it is the clearest example of the failure class this project exists for: the label was a description of what I intended, not of what the code did.",
         ],
       },
       {
@@ -894,7 +910,7 @@ export const projects: Project[] = [
       { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
       { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
       { label: "etcd fsync p99", value: "12.8 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
-      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/failover-test-that-proved-nothing" },
+      { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer; the probe skipped cert verification, see the 8 Oct post", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/monitor-that-never-used-the-vip" },
     ],
     sections: [
       {
@@ -915,6 +931,7 @@ export const projects: Project[] = [
           "The obvious way to test a control-plane VIP is to stop the API server on whichever node holds it. I did that, the API recovered in about a second, and the test looked green.",
           "It was meaningless. kube-vip runs as a DaemonSet with its own leader election, so stopping the API server left the VIP exactly where it was. The address never moved and nothing about failover had been exercised. The same trap as deleting a pod that a DaemonSet recreates in seconds.",
           "Deleting the kube-vip pod on the holder forced a real leadership transfer: the VIP moved from control-plane node 1 to node 3 in roughly three seconds, the API stayed reachable through the VIP throughout, and exactly one node held the address afterwards. That last check matters in both directions: zero holders is an outage, two or more is a split brain.",
+          "That test was also wrong, in a way I only found on 8 October. It polled the API with certificate verification switched off, so it could not see that node 3 was serving a certificate without the VIP in it. Nodes 2 and 3 had been joined without the tls-san block. When kube-vip moved the address to node 3 on its own on 29 September, every kubeconfig started failing x509 and stayed that way for 9 days, 8 hours and 43 minutes. Both control planes now carry the VIP in their certificates, the watchdog checks every control plane for it, and the failover probe verifies certificates. Full write-up in the blog post linked from the metric above.",
         ],
       },
       {
@@ -975,7 +992,7 @@ export const projects: Project[] = [
       { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
       { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
-      { label: "Alert signals", value: "109", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
+      { label: "Alert signals", value: "111", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 8 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
