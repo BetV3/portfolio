@@ -6,7 +6,7 @@ export const metadata: Metadata = {
     "Privacy policy for Rack Rank, an iOS workout tracker with per-gym leaderboards. What is public, what stays on your phone, and how to delete it.",
 };
 
-const EFFECTIVE = "October 7, 2026";
+const EFFECTIVE = "October 9, 2026";
 const CONTACT = "elvisramirez999@gmail.com";
 
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
@@ -92,8 +92,7 @@ export default function Gym01PrivacyPage() {
             the next time you open the app, if the phone was offline), and iCloud stamps every record
             with the time it was saved, so that stamp shows roughly when your first checked-in workout
             of the day ended. If the day at your gym is already over by then, nothing is published
-            for that workout, except a lift you corrected in History that same day while the phone
-            was offline (see Hiding and deleting your data).
+            for that workout.
           </li>
           <li>
             <span className="text-foreground">Lift records:</span> when a checked-in workout
@@ -112,8 +111,7 @@ export default function Gym01PrivacyPage() {
             time you tapped, linked to your username. The app only offers this to members who
             checked in at that gym that day before the lift was saved, so it shows you were there
             that day. If the lifter later changes that lift, your confirmation does not carry over to
-            the changed lift, except in rare cases where the lifter hid from the boards and turned it
-            back on the same day.
+            the changed lift.
           </li>
         </ul>
         <p>
@@ -162,6 +160,8 @@ export default function Gym01PrivacyPage() {
             new ones. Your profile record (username, gym and join date) stays in the public
             database marked as hidden, and your username stays reserved. Your workout history on
             your phone is not affected. Turning it off again does not bring back deleted records.
+            After that, new workouts publish as usual, and a lift you correct in History on the same
+            day as its workout can be published again together with that day&apos;s check-in.
           </li>
           <li>
             <span className="text-foreground">Deleting a workout</span> in History removes the
@@ -170,7 +170,10 @@ export default function Gym01PrivacyPage() {
             records only if the best set of a lift changed: when you tap Done, the old record is
             removed, and the corrected one is published if you made the edit on the same day at your
             gym and it passes the rule above. If the phone is offline, the corrected record is saved
-            the next time you open the app, even if that day has ended by then.
+            the next time you open the app, even if that day has ended by then, as long as the
+            workout was already on the boards. If the workout was still waiting to publish, or you
+            hid from the boards after it, the check-in rule above applies instead: once the day at
+            your gym is over, nothing from that workout is published.
           </li>
           <li>
             <span className="text-foreground">Changing your gym</span> (Settings &gt; Gym) deletes

@@ -54,7 +54,7 @@ export default function Gym01SupportPage() {
           <li>For anything else, use Settings &gt; Safety &gt; Report a user or problem.</li>
           <li>
             To block someone, tap their row on a board and choose Block, or use Settings &gt; Safety
-            &gt; Block a member. Blocking hides them from your boards (pull down on Boards to refresh)
+            &gt; Block a member. Blocking hides them from your boards immediately
             and also sends me a report. Unblock them in Settings &gt; Privacy &gt; Blocked users.
           </li>
           <li>If you cannot use the app, email me the gym and the username.</li>
