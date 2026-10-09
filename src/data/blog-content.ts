@@ -14,6 +14,136 @@ export const blogContent: Record<string, ContentSection[]> = {
   // ============================================
   // CHECKS THAT LIED
   // ============================================
+  "monitor-that-never-used-the-vip": [
+      {
+          type: "paragraph",
+          content: "On 8 October I ran kubectl against the production cluster's virtual IP for the first time in a while and got this:"
+      },
+      {
+          type: "code",
+          language: "text",
+          content: "Get \"https://<prod-vip>:6443/api?timeout=32s\": tls: failed to verify certificate:\nx509: certificate is valid for 127.0.0.1, ::1, <cp-03>, 10.43.0.1, not <prod-vip>"
+      },
+      {
+          type: "paragraph",
+          content: "The API server answering on the VIP was presenting a certificate that was not valid for the VIP. Every kubeconfig pointed at that address had been failing the same way. I went looking for how long, and the answer was 9 days, 8 hours and 43 minutes. The watchdog has a signal for exactly this, labelled \"prod API (via VIP)\". It had been green for all of it."
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "How long, exactly"
+      },
+      {
+          type: "paragraph",
+          content: "kube-vip keeps a Kubernetes Lease for its leadership, and the Lease records when the current holder acquired it. Control plane 3 took the VIP at 07:59:27 UTC on 29 September. The kube-vip logs on the other two nodes agree: control plane 1 logged \"lost leadership, restarting kube-vip\" at 07:59:27 and control plane 3 logged \"assuming leadership of the cluster\" one second later. Nothing I did caused that. kube-vip missed a lease renewal, which on this cluster usually means a slow etcd fsync on the shared NFS datastore, and leadership moved."
+      },
+      {
+          type: "paragraph",
+          content: "That transfer was the start of the outage, because control plane 3 was serving a certificate without the VIP in it. The fix landed at 16:43:10 UTC on 8 October, which is the first sample my probe recorded as ok through the VIP with certificate verification on."
+      },
+      {
+          type: "code",
+          language: "text",
+          content: "VIP moved to cp-03:        2026-09-29 07:59:27Z   (plndr-cp-lock acquireTime)\nfirst verified ok via VIP: 2026-10-08 16:43:10Z   (probe log, line 308 of 321)\nduration:                  9d 8h 43m = 224.7h"
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "Why the certificate was wrong"
+      },
+      {
+          type: "paragraph",
+          content: "RKE2 generates each control plane's serving certificate from that node's own config file. The tls-san list in /etc/rancher/rke2/config.yaml is what adds extra names and addresses, and it is per node. The first control plane was created with the full list: the VIP, all six node addresses, the DNS name. The second and third were joined with a shorter config that had the server address and the join token and nothing else."
+      },
+      {
+          type: "paragraph",
+          content: "So control plane 1 served a certificate valid for the VIP, and control planes 2 and 3 served certificates valid only for themselves. For as long as control plane 1 held the VIP, every client worked. The moment the VIP landed on either of the other two, every client broke. The bug was present from the day the cluster was built, and it took nine days for a failover to expose it."
+      },
+      {
+          type: "callout",
+          variant: "warning",
+          content: "A standby that cannot serve the role it is standing by for is not redundancy. It is a delayed outage with a random start time."
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "Why the monitor said it was fine"
+      },
+      {
+          type: "paragraph",
+          content: "The watchdog runs on a separate host and checks the clusters over ssh. For the API signal it logged into control plane 1 and ran kubectl get --raw /readyz using the node's local kubeconfig. That kubeconfig points at 127.0.0.1. The check was therefore asking control plane 1 whether control plane 1 was ready, and control plane 1 was ready. The label said \"via VIP\". The code never touched the VIP."
+      },
+      {
+          type: "code",
+          language: "python",
+          content: "# before: runs on cp1, kubeconfig points at 127.0.0.1\nrc, out = _ssh(SSH, cp1, f\"{KCTL} get --raw /readyz\", 40)\nyield (f\"{P}:api\", rc == 0 and \"ok\" in out.lower(),\n       f\"{env} API (via VIP)\", ...)"
+      },
+      {
+          type: "paragraph",
+          content: "The metrics stack was no help either, for a different reason. vmagent scrapes the apiserver on the VIP every 30 seconds and up{} was 1 for the entire window. It was configured with insecure_skip_verify: true, so it connected, ignored the certificate, authenticated with its bearer token and scraped happily. A scraper that skips verification cannot see a verification failure."
+      },
+      {
+          type: "paragraph",
+          content: "Two monitors, both green, both wrong in ways that are obvious once written down. One did not go through the path clients use. The other went through it with the check that would have failed switched off."
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "The fix"
+      },
+      {
+          type: "paragraph",
+          content: "Add the same tls-san block to control planes 2 and 3 and restart rke2-server on each, one at a time. With a three-member etcd the quorum holds through a single restart, and I confirmed three etcd pods Running before and after each one. I ran a probe the whole time: kubectl through the VIP with the cluster CA verifying the certificate, every half second, logging ok or FAIL with a timestamp."
+      },
+      {
+          type: "code",
+          language: "text",
+          content: "cp-02: rke2-server ready after 74s; cert_has_vip 0 -> 1; etcd 3/3\ncp-03: rke2-server ready after 67s; cert_has_vip 0 -> 1; etcd 3/3\n\nprobe: 321 samples, 90 ok, 231 FAIL\n  fail window 1: 153.2s (226 samples)   the outage, ending when cp-03 restarted\n  fail window 2:   6.4s (5 samples)     cp-03's apiserver coming back under the VIP"
+      },
+      {
+          type: "paragraph",
+          content: "I had planned to move the VIP off control plane 3 before restarting it so the fix would be invisible to clients. That step failed because my script looked up the kube-vip pod with the wrong label, so the restart happened under the VIP and clients saw a 6.4 second gap. Given they had seen nothing but errors for nine days I did not re-run it, but the plan was right and the script was wrong, and both are in the repo."
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "What changed in the monitoring"
+      },
+      {
+          type: "list",
+          items: [
+              "The API signal now passes --server https://<vip>:6443 explicitly. The cluster CA from the node's kubeconfig still verifies the certificate, so this check fails on exactly the error a client would see.",
+              "A new signal, k8s:<env>:vip-cert, connects to every control plane's apiserver and checks that the certificate it serves includes the VIP in its Subject Alternative Names. This catches the latent state: the holder is fine today, but a standby would break the cluster the moment it takes over.",
+              "vmagent now verifies the apiserver certificates against each cluster's CA instead of skipping verification. All three targets stayed up after the change, and I checked the negative case with openssl -verify_ip against a wrong address: return code 64, IP address mismatch."
+          ]
+      },
+      {
+          type: "paragraph",
+          content: "The new signal has a test that fails if the signal cannot fail. It fakes the ssh layer three ways: the state I actually found (two of three control planes missing the SAN, API down through the VIP), the latent state (API fine, one standby missing the SAN), and a control with everything correct. Then it runs the real check against the live clusters. Eight assertions, and the red ones were red before I deployed anything."
+      },
+      {
+          type: "code",
+          language: "text",
+          content: "PASS  RED vip-cert names both bad CPs\nPASS  RED api via VIP is DOWN on x509\nPASS  RED latent: api green, vip-cert DOWN on standby\nPASS  CONTROL both green\nPASS  GREEN live k8s:stg:api\nPASS  GREEN live k8s:stg:vip-cert     1/1 control planes carry the VIP in SAN\nPASS  GREEN live k8s:prd:api\nPASS  GREEN live k8s:prd:vip-cert     3/3 control planes carry the VIP in SAN"
+      },
+      {
+          type: "heading",
+          level: 2,
+          content: "What I took from it"
+      },
+      {
+          type: "paragraph",
+          content: "The earlier posts in this series were about checks that passed for the wrong reason. This one is a check that passed because it measured a different thing from what its label claimed. The label was written by me, the code was written by me, and I read the label for three weeks and believed it."
+      },
+      {
+          type: "paragraph",
+          content: "The rule I am applying now: a monitor for a client-facing path has to use the client's address, the client's port and the client's certificate verification, or it is monitoring something else. If a check has to skip verification to work, that is the finding, not a configuration detail. And when I write the label for a signal, I now read the code once more and ask whether the label is a description or a wish."
+      },
+      {
+          type: "paragraph",
+          content: "Found while scoping GitOps for these clusters. The config that joined control planes 2 and 3 is going into the bootstrap repository with the tls-san block in it, so the next cluster cannot be built this way."
+      }
+  ],
   "backup-that-restored-nothing": [
     {
       type: "paragraph",

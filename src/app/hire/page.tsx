@@ -30,7 +30,7 @@ const services = [
       { label: "Watchdog modules and red-run tests", href: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     evidence:
-      "109 signals as of 7 October 2026. It caught a certificate under 7 hours from expiry, a renewal timer that restarted a service 67 times in a day, and a trace pipeline that had silently ingested nothing for two days.",
+      "115 signals as of 8 October 2026. It caught a certificate under 7 hours from expiry, a renewal timer that restarted a service 67 times in a day, and a trace pipeline that had silently ingested nothing for two days.",
   },
   {
     title: "Backups you have actually restored",

@@ -201,6 +201,10 @@ jobs:
             '12\.74 ms|superseded 2026-10-07: etcd fsync p99 12.8 ms (prod, 1h window)'
             '13\.63 ms|superseded 2026-10-07: etcd fsync p99 12.5 ms (dev, 1h window)'
             '\b97 signals\b|superseded 2026-10-07: 109 watchdog signals'
+            '\b109 (watchdog |alert |monitored )?signals\b|superseded 2026-10-08: 111 watchdog signals'
+            '"109"|superseded 2026-10-08: 111 watchdog signals'
+            '\b111 (watchdog |alert |monitored )?signals\b|superseded 2026-10-08: 115 watchdog signals'
+            '23 at first release \(18 Sep 2026\); 111 fleet-wide|superseded 2026-10-08: 115 watchdog signals'
             '\b23 node_exporters\b|superseded 2026-10-07: 24 node_exporters'
             '"21"[^}]*probe|superseded 2026-10-07: 22 blackbox probes'
           )
