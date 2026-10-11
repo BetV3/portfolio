@@ -1,0 +1,97 @@
+{
+ "generated_at": "2026-10-11T00:12:54-05:00",
+ "weapons": {
+  "body": {
+   "tiers": [
+    {
+     "id": "B1",
+     "tier": 1,
+     "name": "14-day training streak",
+     "target": 14.0,
+     "value": 0.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "B2",
+     "tier": 2,
+     "name": "Bench e1RM 300",
+     "target": 300.0,
+     "value": 285.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "B3",
+     "tier": 3,
+     "name": "30 sessions logged (block 2)",
+     "target": 30.0,
+     "value": 2.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "B4",
+     "tier": 4,
+     "name": "45-day training streak",
+     "target": 45.0,
+     "value": 0.0,
+     "unlocked_at": null
+    }
+   ]
+  },
+  "build": {
+   "tiers": [
+    {
+     "id": "R1",
+     "tier": 1,
+     "name": "Rack Rank external TestFlight live",
+     "target": 1.0,
+     "value": 0.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "R2",
+     "tier": 2,
+     "name": "25 testers",
+     "target": 25.0,
+     "value": 0.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "R3",
+     "tier": 3,
+     "name": "App Store submitted",
+     "target": 1.0,
+     "value": 0.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "R4",
+     "tier": 4,
+     "name": "App Store live",
+     "target": 1.0,
+     "value": 0.0,
+     "unlocked_at": null
+    },
+    {
+     "id": "R5",
+     "tier": 5,
+     "name": "500 installs",
+     "target": 500.0,
+     "value": 0.0,
+     "unlocked_at": null
+    }
+   ]
+  },
+  "business": {
+   "tiers": [
+    {
+     "id": "C4",
+     "tier": 4,
+     "name": "First paying customer",
+     "target": 1.0,
+     "value": 0.0,
+     "unlocked_at": null
+    }
+   ]
+  }
+ }
+}
