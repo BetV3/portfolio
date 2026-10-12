@@ -122,7 +122,8 @@ export default function ResumePage() {
                 heartbeats, approval gates, capped concurrency) for long-running
                 automated work; found a reaper bug where a NULL lease made stuck
                 tasks invisible and fixed it with tests in both directions.
-                (<Link className="underline decoration-dotted" href="/projects/task-queue">details</Link>)
+                (<Link className="underline decoration-dotted" href="/projects/task-queue">details</Link>,{" "}
+                <Link className="underline decoration-dotted" href="https://github.com/BetV3/orch-queue">source</Link>)
                 </span>
               </li>
               <li className="flex items-start gap-3">
