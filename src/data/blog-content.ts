@@ -11,6 +11,172 @@ interface ContentSection {
 }
 
 export const blogContent: Record<string, ContentSection[]> = {
+  "cert-that-expired-with-a-green-timer": [
+    {
+        "type": "paragraph",
+        "content": "On 11 October I opened the Grafana dashboard from my phone over a new VPN and got a certificate warning. I had just installed the homelab root CA on the phone, so my first assumption was that I had done that wrong. I spent ten minutes on the phone. The phone was fine. The server was presenting a certificate that had expired on 22 September, nineteen days earlier."
+    },
+    {
+        "type": "code",
+        "language": "text",
+        "content": "$ echo | openssl s_client -connect <obs-host>:3000 -servername grafana.<lab> 2>/dev/null | openssl x509 -noout -dates\nnotBefore=Sep 21 02:25:34 2026 GMT\nnotAfter=Sep 22 02:26:34 2026 GMT"
+    },
+    {
+        "type": "paragraph",
+        "content": "The internal CA issues 24 hour leaves on purpose. Short lifetimes are the whole point: a renewal path that works is exercised every day, and a leaked key is useless by tomorrow. The cost is that renewal has to actually work, and a renewal that silently does nothing is an outage scheduled for the next morning. This one was scheduled for 22 September and nobody noticed for three weeks, because the only client that talked to Grafana was me, on the LAN, with a browser that had already accepted the certificate once."
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "What the timer said"
+    },
+    {
+        "type": "paragraph",
+        "content": "There is a systemd timer on that host whose entire job is to renew this certificate. I checked it first, expecting it to be dead."
+    },
+    {
+        "type": "code",
+        "language": "text",
+        "content": "$ systemctl status grafana-cert-renew.timer\n     Active: active (waiting) since Fri 2026-10-09 17:53:17 UTC\n    Trigger: Mon 2026-10-12 04:09:34 UTC; 2h 42min left\n\n$ journalctl -u grafana-cert-renew.service --since 2026-09-22 | grep -c Finished\n40\n$ journalctl -u grafana-cert-renew.service --since 2026-09-22 | grep -ci 'fail\\|error'\n0\n\n$ ls -la --time-style=long-iso /opt/obs/certs/grafana.crt\n-rw-r--r-- 1 472 472 1543 2026-09-21 02:26 /opt/obs/certs/grafana.crt"
+    },
+    {
+        "type": "paragraph",
+        "content": "Forty runs. Forty clean exits. Zero errors in the journal. A certificate file untouched since the day it was issued. The timer was not dead. It had been running on schedule the entire time and accomplishing nothing, and reporting that as success every single time."
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "Why it exited 0"
+    },
+    {
+        "type": "paragraph",
+        "content": "The renewal script was eleven lines. The one that mattered:"
+    },
+    {
+        "type": "code",
+        "language": "bash",
+        "content": "# --expires-in: no-op unless inside the window, so a frequent timer is cheap.\nstep ca renew --force --expires-in 8h \"$CRT\" \"$KEY\" >/dev/null 2>&1 || exit 0"
+    },
+    {
+        "type": "paragraph",
+        "content": "I wrote that line and I know exactly what I was thinking. step ca renew exits non-zero when the certificate is not yet inside the renewal window, with a message like \"certificate not renewed: expires in 18h\". That is not an error, and I did not want a timer that fires every few hours to fail the unit on every tick. So I swallowed the exit code. All of it. The no-op case and every real failure, routed to the same exit 0, with stderr sent to /dev/null for good measure."
+    },
+    {
+        "type": "paragraph",
+        "content": "The real failure, once I ran the command by hand, was this:"
+    },
+    {
+        "type": "code",
+        "language": "text",
+        "content": "$ sudo step ca renew --force --expires-in 8h /opt/obs/certs/grafana.crt /opt/obs/certs/grafana.key\nThe request lacked necessary authorization to be completed:\ncertificate expired on 2026-09-22 02:26:34 +0000 UTC"
+    },
+    {
+        "type": "paragraph",
+        "content": "step ca renew authenticates to the CA using the certificate it is renewing. That is the property that makes it safe to automate: no password on the client, the cert is the credential. It also means that once the cert is past notAfter, renewal is permanently locked out. There is no flag past this. Every one of those forty runs had hit this exact error, and the script had translated it to success."
+    },
+    {
+        "type": "callout",
+        "variant": "warning",
+        "content": "Once a short-lived certificate has expired, the renewal path cannot recover it. The fix is a fresh issuance, not a retry. If you fix the renewer and re-run it and it still fails with the same error, that is not your fix failing. That is the lockout."
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "The second bug, found while writing this up"
+    },
+    {
+        "type": "paragraph",
+        "content": "When I went to quote the timer definition for this post, I read it properly for the first time."
+    },
+    {
+        "type": "code",
+        "language": "ini",
+        "content": "[Timer]\nOnCalendar=*-*-* 04,16:07:00\nRandomizedDelaySec=600"
+    },
+    {
+        "type": "paragraph",
+        "content": "Twice a day, at 04:07 and 16:07. The certificate is valid for 24 hours and the renewer only acts inside the last 8 hours. A certificate issued at 02:26 UTC enters its renewal window at 18:26. The next tick is 04:07 the following day, at which point the certificate has 2 hours and 19 minutes left. That works, barely, as long as nothing else goes wrong. Issue the cert at a different time of day and there are schedules where neither tick lands inside the 8 hour window at all."
+    },
+    {
+        "type": "paragraph",
+        "content": "The other three hosts on this fleet run the same renewal with OnCalendar=*:0/15. Every 15 minutes. I had written this one by hand instead of from the template, and I had reasoned \"twice a day is plenty for a 24 hour cert\" without doing the arithmetic against the window. Even with a correct script, this timer would have been a coin flip."
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "Why the watchdog did not catch it"
+    },
+    {
+        "type": "paragraph",
+        "content": "I run a fleet watchdog that checks, among about ninety other things, the PKI: is the CA answering, is each renewal timer active, does each leaf have more than six hours left. It had been green on PKI for the entire three weeks. Two reasons."
+    },
+    {
+        "type": "list",
+        "items": [
+            "The Grafana host was not in its list. The PKI module watched three leaves: the forge, the tracing stack, and the memory store. Grafana got TLS a day after the module was written and I never added it. A monitor cannot catch a host it does not know exists.",
+            "Even if it had been in the list, the signal that existed asked the wrong question. It asked whether the timer was active. The timer was active. It had been active for twenty days while failing every run. \"Scheduled\" and \"succeeding\" are different facts, and I was only checking the first one."
+        ]
+    },
+    {
+        "type": "paragraph",
+        "content": "This is the fifth post in this series and it is the same lesson as the other four. A check that cannot fail is not a check. A green signal only means something if there is a real way for it to go red, and I had built a renewal pipeline where the script could not report failure and the monitor could not see the host."
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "The fix"
+    },
+    {
+        "type": "paragraph",
+        "content": "Four changes, in the order I made them."
+    },
+    {
+        "type": "list",
+        "items": [
+            "Fresh issuance via the ACME provisioner, since renew could not recover an expired leaf. Installed with the container's uid, Grafana restarted, then verified against the root CA without -k before the old files were removed. The script rolls back to the previous cert if that check does not return 200, which matters because the previous cert at least loaded.",
+            "The renewer now distinguishes the no-op from a failure. It captures stderr, greps for \"not renewed\", and exits 0 only in that case. Anything else logs the message and exits 1, which fails the unit.",
+            "The timer moved to every 15 minutes, matching the other hosts.",
+            "The watchdog PKI module gained the Grafana host and a new signal per host, pki:renewal-result, which reads ExecMainStatus of the renew service. A timer that is active but whose last run exited 1 is now red."
+        ]
+    },
+    {
+        "type": "paragraph",
+        "content": "Then the part I have learned not to skip: proving the fix can see the failure it was built for. I fed the watchdog a synthetic response for the Grafana host with the timer active, the last exit status 1, and the old expiry date. The old signal stayed green, exactly as it had for twenty days. The new one went red, and so did the leaf expiry."
+    },
+    {
+        "type": "code",
+        "language": "text",
+        "content": "pki:renewal:grafana          OK   grafana-cert-renew.timer: active\npki:renewal-result:grafana   RED  grafana-cert-renew.service ExecMainStatus=1\npki:leaf:grafana             RED  -479.1h remaining\nRED TEST PASS: the 20-day failure mode now produces two red signals"
+    },
+    {
+        "type": "paragraph",
+        "content": "And the renewal itself, on a copy of the live certificate with a threshold wide enough to force it:"
+    },
+    {
+        "type": "code",
+        "language": "text",
+        "content": "$ step ca renew --force --expires-in 23h59m /tmp/g.crt /tmp/g.key\nYour certificate has been saved in /tmp/g.crt.\nRENEWAL VERIFIED: serial 5DC635B4... -> DEF56E45..., no password used"
+    },
+    {
+        "type": "heading",
+        "level": 2,
+        "content": "What I would tell someone building this"
+    },
+    {
+        "type": "list",
+        "items": [
+            "Never swallow an exit code to silence one known benign case. Match the benign case explicitly and let everything else fail. \"|| exit 0\" and \"2>/dev/null\" on the same line is a renewal script that cannot tell you anything.",
+            "Do the arithmetic on the timer against the renewal window. For a 24 hour cert with an 8 hour threshold, the tick interval has to be a small fraction of 8 hours, not a fraction of 24. Fifteen minutes is cheap; step ca renew is a no-op outside the window.",
+            "Monitor the outcome, not the scheduler. systemctl is-active on a timer tells you the schedule exists. ExecMainStatus on the service tells you whether the last run worked. You need the second one.",
+            "Every new TLS endpoint is a monitoring change too. The day a service gets a certificate is the day it goes on the leaf list. I now treat that as part of the same change, not a follow-up.",
+            "When a browser shows a cert warning for an internal service, check the server's notAfter before touching the client. Ten minutes on the phone would have been thirty seconds of openssl."
+        ]
+    },
+    {
+        "type": "paragraph",
+        "content": "The certificate is valid again. The timer ticks every 15 minutes. The renewer fails loudly. The watchdog knows the host exists and reads the result, not the schedule. And I found out about all of it because I happened to open a dashboard from a new device, which is the least reliable monitoring system I own."
+    }
+],
   // ============================================
   // CHECKS THAT LIED
   // ============================================

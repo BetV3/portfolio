@@ -48,7 +48,7 @@ export const series: BlogSeries[] = [
     id: "things-that-lied",
     title: "Checks That Lied",
     description:
-      "Four times a green signal meant nothing: a backup that restored an empty file, a failover test that proved the opposite of what it claimed, a runbook that had never once worked, and a monitor that said the API was fine through a VIP it never used.",
+      "Five times a green signal meant nothing: a backup that restored an empty file, a failover test that proved the opposite of what it claimed, a runbook that had never once worked, a monitor that said the API was fine through a VIP it never used, and a renewal timer that ran 40 times while the certificate sat expired.",
     color: "red",
   },
   {
@@ -62,8 +62,22 @@ export const series: BlogSeries[] = [
 
 export const posts: BlogPost[] = [
   // ============================================
-  // CHECKS THAT LIED (4 posts)
+  // CHECKS THAT LIED (5 posts)
   // ============================================
+  {
+    slug: "cert-that-expired-with-a-green-timer",
+    published: true,
+    title: "The Renewal Timer That Ran 40 Times While the Certificate Sat Expired",
+    description:
+      "Grafana's TLS certificate expired on 22 September. The renewal timer fired twice a day for 20 days, every run logged success, and the certificate on disk never changed. The script ended in || exit 0, the timer was too slow for the renewal window, and the watchdog had never heard of the host.",
+    date: "2026-10-11",
+    category: "Operations",
+    readTime: "7 min read",
+    series: "things-that-lied",
+    seriesOrder: 5,
+    tags: ["TLS", "PKI", "systemd", "Monitoring", "Incident"],
+    featured: true,
+  },
   {
     slug: "monitor-that-never-used-the-vip",
     published: true,
