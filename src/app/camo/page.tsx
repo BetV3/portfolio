@@ -27,7 +27,7 @@ const LABEL: Record<string, string> = {
 const SOURCE: Record<string, string> = {
   build: "App Store Connect, confirmed by hand until the API collector lands",
   body: "Rack Rank workout exports, every set",
-  business: "CheckPulse CRM on postgres-01",
+  business: "the CheckPulse CRM database",
 };
 
 function fmt(n: number) {

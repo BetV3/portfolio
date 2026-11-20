@@ -27,8 +27,8 @@ export default function Home() {
           <p className="mt-6 text-lg leading-8 text-muted-foreground">
             I build and operate systems end to end: a monitoring SaaS live in
             production, three Kubernetes environments, an observability stack
-            and a fleet watchdog, all on a seven-host vSphere cluster I
-            administer myself. Looking for backend, platform, infrastructure, SRE or DevOps roles.
+            and a fleet watchdog, all on a vSphere cluster I administer
+            myself. Looking for backend, platform, infrastructure, SRE or DevOps roles.
           </p>
 
           <dl className="mt-8 grid gap-x-8 gap-y-2 text-sm sm:grid-cols-2">
@@ -375,7 +375,7 @@ export default function Home() {
               </p>
               <p>
                 Most of what I know came from running things rather than reading
-                about them. I operate a seven-host vSphere cluster at home, and the
+                about them. I operate a vSphere cluster at home, and the
                 projects on this site are deployed on it or on a VPS I pay for,
                 which means I am also the one who gets paged when they break.
                 These are projects, not employment: I have not held a professional
@@ -427,7 +427,7 @@ export default function Home() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Closing the offsite-backup gap: every copy is still in one building
+                  Finding why etcd disk latency doubled on all three clusters on 23 October
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />

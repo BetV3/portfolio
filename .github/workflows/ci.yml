@@ -205,8 +205,26 @@ jobs:
             '"109"|superseded 2026-10-08: 111 watchdog signals'
             '\b111 (watchdog |alert |monitored )?signals\b|superseded 2026-10-08: 115 watchdog signals'
             '23 at first release \(18 Sep 2026\); 111 fleet-wide|superseded 2026-10-08: 115 watchdog signals'
-            '\b23 node_exporters\b|superseded 2026-10-07: 24 node_exporters'
+            # '23 node_exporters' removed 2026-11-19: the live count is 23 again (count(count by (instance) (node_cpu_seconds_total)) on obs-01)
             '"21"[^}]*probe|superseded 2026-10-07: 22 blackbox probes'
+            '\b115 (watchdog |alert |monitored )?signals\b|superseded 2026-11-19: 190 watchdog signals'
+            '"115"|superseded 2026-11-19: 190 watchdog signals'
+            '115 fleet-wide|superseded 2026-11-19: 190 watchdog signals'
+            '\b77 (scrape )?targets\b|superseded 2026-11-19: 79 scrape targets'
+            '"77"|superseded 2026-11-19: 79 scrape targets'
+            '23\.6M|superseded 2026-11-19: 26.9M rows/hr'
+            '\b40 (powered-on )?VMs\b|superseded 2026-11-19: vCenter reports 50 powered on of 73'
+            'powered on of 55|superseded 2026-11-19: 73 defined'
+            '273 GB in use|superseded 2026-11-19: 314 GB in use on the 4 running hosts'
+            '2,658|superseded 2026-11-19: 8,907 SRE agent ticks'
+            '\b189 incidents|superseded 2026-11-19: 621 incidents'
+            '"189"|superseded 2026-11-19: 621 incidents'
+            '0 of 39 job applications|\b39 submitted applications|superseded 2026-11-19: 87 submitted, 84 approved one at a time'
+            '"120"|superseded 2026-11-19: 258 tasks'
+            '"152"|superseded 2026-11-19: 302 approval parks'
+            'Offsite copies|superseded 2026-11-19: R2 offsite copy exists since 2026-10-20'
+            'seven-host vSphere cluster I|superseded 2026-11-19: four of seven hosts powered on'
+            '15 of 15 guardrail|superseded 2026-11-19: 19/19 guardrail tests'
           )
           # Same grep-exits-2 trap as the placeholder check above: a missing
           # path silently disabled this check from the day it was written.
@@ -215,7 +233,12 @@ jobs:
           echo "scanning:$SCAN"
           RC=0
           for entry in "${STALE[@]}"; do
-            pat="${entry%%|*}"; why="${entry##*|}"
+            # Split at the LAST '|': patterns may contain alternations such as
+            # (watchdog |alert ). Splitting at the first '|' (as this did until
+            # 2026-11-19) truncated those into invalid regexes, grep exited 2,
+            # and `if grep` read that as "no match": the 109/111-signal entries
+            # never fired. Found by planting each old figure in a scratch tree.
+            pat="${entry%|*}"; why="${entry##*|}"
             if grep -rInE "$pat" --include='*.ts' --include='*.tsx' \
                  --include='*.md' --include='*.mdx' $SCAN; then
               echo "::error::Stale figure matching /$pat/ -- $why"

@@ -30,33 +30,33 @@ export interface SiteStat {
 
 export const siteStats: SiteStat[] = [
   {
-    value: "7 hosts / 40 VMs",
-    label: "vSphere estate I administer",
-    source: "vCenter API, 7 Oct 2026",
+    value: "50 VMs on 4 hosts",
+    label: "vSphere cluster I administer (3 more hosts powered down to save power)",
+    source: "vCenter API, 19 Nov 2026",
     href: "/projects/homelab",
   },
   {
     value: "3 clusters, 15 nodes",
     label: "Kubernetes environments (dev, staging, prod)",
-    source: "kubectl get nodes, 7 Oct 2026",
+    source: "kubectl get nodes, 19 Nov 2026",
     href: "/projects/k8s-three-environments",
   },
   {
-    value: "115",
+    value: "190",
     label: "monitored signals in a watchdog I wrote",
-    source: "the watchdog's signal registry, 8 Oct 2026",
+    source: "the watchdog's signal registry, 19 Nov 2026",
     href: "/projects/fleet-watchdog",
   },
   {
-    value: "77",
-    label: "scrape targets, 23.6M rows/hr ingested",
-    source: "vmagent targets API, 7 Oct 2026",
+    value: "79",
+    label: "scrape targets, 26.9M rows/hr ingested",
+    source: "vmagent targets API, 19 Nov 2026",
     href: "/projects/observability-stack",
   },
   {
-    value: "9",
+    value: "10",
     label: "project pages with a root-caused incident write-up",
-    source: "counted on this site, 7 Oct 2026; 3 more incidents are blog posts",
+    source: "counted on this site, 19 Nov 2026; plus 5 incident posts on the blog",
     href: "/projects",
   },
   {

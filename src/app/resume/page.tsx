@@ -44,8 +44,8 @@ export default function ResumePage() {
         <p className="text-muted-foreground leading-relaxed">
           Backend and platform engineer moving toward SRE, CS graduate from UT
           Dallas (August 2025). I build services in Python and Go and run them
-          myself: a monitoring SaaS in production on a VPS, and a seven-host
-          vSphere cluster at home with three Kubernetes environments, an
+          myself: a monitoring SaaS in production on a VPS, and a vSphere
+          cluster at home with three Kubernetes environments, an
           observability stack, an internal CA and a fleet watchdog I wrote.
           Comfortable owning a system from the request path down to the
           hypervisor it lands on, and writing up the incidents when it breaks.
@@ -89,7 +89,7 @@ export default function ResumePage() {
                 <span>
                   Wrote a fleet watchdog (Python, system cron, separate host) after
                 a scheduled job failed 970 consecutive times with one alert;
-                now 115 signals with stable IDs, dedupe, recovery messages and a
+                now 190 signals with stable IDs, dedupe, recovery messages and a
                 dead man&apos;s switch, each red-run before being trusted.
                 (<Link className="underline decoration-dotted" href="/projects/fleet-watchdog">details</Link>)
                 </span>
@@ -97,8 +97,8 @@ export default function ResumePage() {
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
                 <span>
-                  Stood up VictoriaMetrics, vmagent and Grafana over 77 scrape
-                targets (23.6M rows/hr); verified all 30 dashboard panels by
+                  Stood up VictoriaMetrics, vmagent and Grafana over 79 scrape
+                targets (26.9M rows/hr); verified 30 dashboard panels by
                 executing their queries, exposed etcd fsync latency with a
                 rolling control-plane restart, and proved the remote-write queue
                 by stopping the database for 100 s with zero sample loss.
@@ -258,8 +258,10 @@ export default function ResumePage() {
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
                 Administer a seven-host ESXi cluster under vCenter 8 (132
-                cores, 607 GB RAM, 40 powered-on VMs as of October 2026),
-                operated through the vCenter API rather than the web client.
+                cores, 607 GB RAM), operated through the vCenter API rather
+                than the web client. In November 2026 moved 15 running VMs live
+                with vMotion (at most 2 pings lost per move) so three hosts
+                could be powered down; 50 VMs now run on four.
               </li>
               <li className="flex items-start gap-3">
                 <span className="mt-2 h-1 w-1 flex-shrink-0 rounded-full bg-muted" />
@@ -295,7 +297,7 @@ export default function ResumePage() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
-                  Personal Shopper
+                  Loader (Personal Shopper until Oct 2026)
                 </h3>
                 <p className="text-accent">Walmart Inc</p>
               </div>
