@@ -136,7 +136,10 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "kubernetes-cluster-architecture",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "Kubernetes Cluster Architecture: Planning for Production",
     description:
       "How to design a Kubernetes cluster that can handle real workloads. Covering node sizing, control plane HA, networking decisions, and capacity planning.",
@@ -209,7 +212,10 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "log-aggregation-architecture",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "Designing a Scalable Log Aggregation Architecture",
     description:
       "Architecture decisions for building a logging system that can handle millions of events per day while remaining queryable and cost-effective.",
@@ -263,7 +269,10 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "terraform-patterns-scale",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "Infrastructure as Code: Terraform Patterns That Scale",
     description:
       "Organizing Terraform code for real-world projects. Modules, workspaces, state management, and team collaboration patterns.",
@@ -277,7 +286,10 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "cicd-pipeline-design",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "CI/CD Pipeline Design for Modern Applications",
     description:
       "Building robust CI/CD pipelines with proper testing stages, security scanning, and deployment strategies.",
@@ -318,7 +330,10 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "why-homelab",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "Why I Built a Homelab (And You Should Too)",
     description:
       "The case for running your own infrastructure at home. Learning opportunities, cost analysis, and getting started.",
@@ -331,7 +346,10 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "network-segmentation-homelab",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "Network Segmentation in the Homelab",
     description:
       "Implementing VLANs, firewall rules, and zero-trust principles to secure a home network with multiple trust zones.",
@@ -372,7 +390,10 @@ export const posts: BlogPost[] = [
   // ============================================
   {
     slug: "api-rate-limiting-go",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "API Rate Limiting Patterns in Go",
     description:
       "Implementing token bucket, sliding window, and distributed rate limiting in Go with Redis backing.",
@@ -403,7 +424,10 @@ export const posts: BlogPost[] = [
   },
   {
     slug: "postgres-performance-tuning",
-    published: true,
+    // Unpublished 2026-11-19: generic tutorial written before the lab existed. No first-person
+    // experience, no numbers from a system I run, nothing an interviewer could ask me to
+    // walk through. Rewrite from a real deployment before republishing.
+    published: false,
     title: "PostgreSQL Performance Tuning in Production",
     description:
       "Real-world PostgreSQL optimization: query analysis, index strategies, connection pooling, and configuration tuning.",

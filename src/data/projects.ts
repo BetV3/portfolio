@@ -157,11 +157,125 @@ export const projects: Project[] = [
     ],
   },
   {
+    slug: "packet-drop",
+    github: "https://github.com/BetV3/packet-drop",
+    title: "XDP DDoS Filter with a Go Control Plane",
+    tagline:
+      "Cloudflare's 2018 packet-drop benchmark rebuilt on my hardware, then an XDP filter with a Go control plane and a detector that blocks a 13 Mpps flood in a median 133 ms.",
+    category: "Networking / Systems",
+    status: "complete",
+    accent: "orange",
+    order: 1.5,
+    featured: true,
+    recruiter: {
+      role: "Solo: designed, built and measured",
+      timeframe: "Oct 2026",
+      timeframeSource: "first commit 16 Oct 2026; attack tests 21 and 22 Oct 2026",
+      teamSize: "1",
+      outcome:
+        "An XDP filter and Go control plane that stopped 24 of 24 spoofed floods in the attack test, with zero flood packets reaching the service once the rule was live, and no packet in the swap test ever seeing a half-updated rule set.",
+      problem:
+        "Cloudflare's 2018 post measured how fast Linux can drop packets at each layer of the network stack. I wanted to know whether the numbers held on my hardware, and then whether I could build the thing that sits on top of that fast path: something that decides what to drop while an attack is running.",
+      approach:
+        "Two VMs with the 10G cards passed straight through, connected by a direct cable. A kernel packet generator floods one core at about 13 Mpps. Every result is a row in a CSV that records the git commit and the full environment, and every table is generated from those CSVs. Then dropd: an XDP program in C, a Go daemon built on cilium/ebpf, and a detector that samples 1 in 1,000 packets.",
+      result:
+        "XDP dropped at about 150 CPU cycles per packet against roughly 880 for iptables and 3,950 for a userspace program. dropd with a full rule set costs 258 cycles per packet. The attack test found two real bugs. Fixing the first took the flood's cost from 570 to 258 cycles per packet. Fixing the second took the detector from 4 of 8 attacks stopped to 24 of 24.",
+    },
+    tech: [
+      { name: "XDP / eBPF (C)", category: "Packet filter" },
+      { name: "Go + cilium/ebpf", category: "Control plane and detector" },
+      { name: "Linux kernel pktgen", category: "Traffic generator" },
+      { name: "perf", category: "Cycles per packet" },
+      { name: "VMware ESXi PCI passthrough", category: "Lab" },
+      { name: "Python", category: "Harness and reports" },
+      { name: "Prometheus metrics + Grafana", category: "Observability" },
+    ],
+    metrics: [
+      {
+        label: "Time to block a flood",
+        value: "133 ms",
+        subtext: "median, 5 runs on 4 cores: flood onset at the NIC to the auto rule going live",
+        source: "bench/pd24_attack.py, report/pd24.md, 21 Oct 2026",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd24.md",
+      },
+      {
+        label: "Attacks stopped",
+        value: "24/24",
+        subtext: "after the detector fix; the first version stopped 4 of 8",
+        source: "results/pd24_attack*.csv, report/pd24.md",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd24.md",
+      },
+      {
+        label: "XDP vs iptables",
+        value: "152 vs 879",
+        subtext: "CPU cycles to drop one packet: Cloudflare's 2018 XDP program vs iptables raw table",
+        source: "results/pd12.csv and pd21_dropd.csv, retpoline mitigations, GRO off",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd21.md",
+      },
+      {
+        label: "Mixed rule sets seen",
+        value: "0",
+        subtext: "across ~1,100 rule swaps under traffic; a deliberately broken version shows 477,035",
+        source: "TestAtomicSwap and TestAtomicSwapRedRun, BPF_PROG_TEST_RUN",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/dropd/internal/engine/engine_test.go",
+      },
+    ],
+    sections: [
+      {
+        heading: "Reproducing the 2018 post",
+        body: [
+          "The post walks down the Linux network stack and drops packets at each layer: a userspace program, a socket filter, iptables, nftables, tc, and finally XDP, which runs inside the network driver before the kernel builds its usual packet structure. I ran the same eight programs on one core of a Haswell Xeon (E5-2650 v3) inside a VMware VM, with the Intel X540 10G card passed straight through to it.",
+          "The ranking came out almost the same as the post's, with XDP far ahead of everything else; only tc and the iptables raw table swapped places. Absolute numbers came out lower, largely because the VM ran with the Spectre mitigation the kernel picked for it, IBRS. Switching the guest to retpoline took iptables from 1.08 to 3.31 million packets per second. That is a lab setting and I would not change it on a real host. With retpoline, XDP drops a packet in about 150 cycles and iptables in about 880, so XDP is roughly six times cheaper.",
+          "I report cycles per packet next to packets per second throughout. A faster CPU has more cycles per second but needs about the same number of cycles to drop a packet, so the cycle figure is the one that transfers to other hardware.",
+        ],
+        image: "/packet-drop-ladder.1053cb4a.png",
+        imageAlt: "Bar chart comparing packets dropped per second on one CPU for eight methods, Cloudflare 2018 against this bench",
+        imageCaption: "The 2018 ladder on one core, before the mitigation and GRO tuning. Generated from results/pd06_ladder.csv.",
+      },
+      {
+        heading: "Making the CPU the bottleneck again",
+        body: [
+          "A benchmark only measures the defender if the attacker is faster. Plain XDP needs about 150 cycles per packet, which is 18 to 20 million packets per second on one core. The 10G wire tops out at 14.88 million, and my generator reached 13.26 million after I gave it more vCPUs and pinned it to the network card's NUMA node. So the plain XDP numbers measure the generator, and the report says so next to each row.",
+          "dropd with real rules costs more than that, which is useful here. With a full rule set one core drops 10.76 million packets per second, below the generator's rate, so for dropd the core is the limit again and the cycle counts are its own.",
+          "I tried DPDK first to get a faster generator, and it crashed the hypervisor host. The X540 has two ports on one chip. One was passed through to the generator VM; the other carried the host's management network. While DPDK drove the passed-through port, the host logged a fatal PCIe error on the management port and went down. The host had to be restarted. I checked that every VM on it came back, wrote it up, and added a guard to the scripts that refuses to run DPDK on that card.",
+        ],
+      },
+      {
+        heading: "dropd: what it does",
+        body: [
+          "The XDP program checks each packet against a rule set in a fixed order. First a fingerprint match on protocol, destination port, TTL and packet length, which is what a flood tool's packets have in common. Then the source address against a blocklist of up to a million prefixes. Then port rules, then a default. A rule can drop, pass, or rate limit.",
+          "The Go daemon owns the rules. It builds a new rule set in a spare copy of the maps and then flips a single index that says which copy is live. A packet reads that index once, so it sees either the whole old set or the whole new one. A test pushes 1.9 million packets through the real program while the rule set flips about 1,100 times and requires zero mixed reads. The same test against a version that edits the live copy in place shows 477,035 mixed reads, which is how I know the test can fail.",
+          "The detector reads 1 in 1,000 packets from a ring buffer, keeps a picture of normal traffic, and when the passing rate jumps it looks for the narrowest fingerprint that covers most of the new traffic and almost none of the old. Its rules expire on their own once the attack stops.",
+          "Per feature on one core: parsing alone is 160 cycles per packet, a port rule 212, a fingerprint 217, and a miss in a 1M-entry blocklist about 500.",
+        ],
+      },
+      {
+        heading: "The attack test, and the two bugs it found",
+        body: [
+          "Sixteen simulated users send 50,000 packets per second to a service on the test machine, each packet numbered so every loss can be counted. Ten seconds in, a 13 Mpps spoofed flood hits the same port. Blocking the port would take the users down with it, so the detector has to find the flood's fingerprint.",
+          "The first run still lost 4.8% of legitimate packets after the rule went live. The main cause was match order: I had put the blocklist first, and a spoofed flood comes from random addresses, so every attack packet paid for a full miss in a million-entry trie before reaching the fingerprint that would drop it. Checking fingerprints first took the flood from 570 to 258 cycles per packet, and the next runs lost under 1%.",
+          "The second bug was in the detector, and it missed 4 of 8 attacks. A flood ramps up over a fraction of a second, and my detector learned every calm-looking 100 ms window as normal straight away. So it learned the start of the flood. In one run that made the flood's fingerprint look like 7.6% of normal traffic, and the detector refused to block it as too broad for the full 20 seconds. On a single core the alarm threshold climbed with the flood and the attack was never declared. Now a calm window waits two seconds before it counts, and is thrown away if an alarm goes off in the meantime. Two regression tests replay both failures. They fail on the old code and pass on the new.",
+        ],
+        image: "/packet-drop-attack-timeline.453bd33e.png",
+        imageAlt: "Three-panel timeline of one attack run: packet rate at the NIC, flood packets reaching the service, and legitimate packet loss",
+        imageCaption: "The median attack run on four cores. Flood packets reach the service until the auto rule goes live 133 ms after onset, and none after. Legit loss averages under 1% for the rest of the flood, with spikes to about 5%.",
+      },
+      {
+        heading: "What is still not solved",
+        body: [
+          "Once the rule is live no flood packet reaches the service, but about 1% of legitimate packets are still lost on four cores. The network card drops them because its receive ring fills before a core gets to it. The cores were a quarter to a third idle, so it is not raw CPU. Keeping them from halting between polls, with a busy loop that only runs when nothing else wants the core, cut the loss to 0.17%. That looks like the time a VM's idle CPU takes to wake back up. A bigger ring made it worse, which I have not explained.",
+          "On a single core, legit loss is 13 to 19%. The core is 100% busy, and measuring it showed why it falls short of the benchmark number: each legitimate packet that is passed to the service costs about 6,700 cycles, against 245 for each flood packet dropped, so the traffic you let through competes with the flood for the same core. The answer there is more receive queues, not a faster filter.",
+          "Other limits: IPv4 only, one host's detector with no fleet-wide view, and everything measured on one older CPU inside a VM. The full reports, including the runs that went wrong, are in the repository.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "fleet-watchdog",
     github: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
     title: "Fleet Watchdog",
     tagline:
-      "A ~250-line Python watchdog that runs on a different host from the agent fleet it watches, built after a cron job failed 970 times in four days and alerted exactly once.",
+      "A Python watchdog that runs on a different host from the agent fleet it watches, built after a cron job failed 970 times in four days and alerted exactly once.",
     category: "Infrastructure / Reliability",
     status: "live",
     accent: "amber",
@@ -182,7 +296,7 @@ export const projects: Project[] = [
       approach:
         "A small Python watchdog on a separate host under system cron, stable alert IDs, dedupe and recovery messages, a second host watching the watchdog, and every signal red-run before it was trusted.",
       result:
-        "115 signals today across hosts, DNS, Kubernetes, PKI, CI and storage. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
+        "190 signals as of 19 Nov 2026 across hosts, DNS, Kubernetes, PKI, CI, storage and the job pipeline. It caught a real scheduler drift on its first run, a certificate 7 hours from expiry, and a renewal timer bouncing a service 67 times a day.",
     },
     featured: true,
     tech: [
@@ -208,9 +322,9 @@ export const projects: Project[] = [
       },
       {
         label: "Signals watched",
-        value: "115",
-        subtext: "23 at first release (18 Sep 2026); 115 fleet-wide now",
-        source: "the watchdog's signal registry, read 8 Oct 2026",
+        value: "190",
+        subtext: "23 at first release (18 Sep 2026); 190 fleet-wide now",
+        source: "the watchdog's signal registry, read 19 Nov 2026",
         evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
       },
       {
@@ -248,8 +362,8 @@ export const projects: Project[] = [
       {
         heading: "What I built",
         body: [
-          "watchdog.py is about 250 lines of Python. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
-          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge) bring it to 115 signals as of 8 October 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
+          "watchdog.py started as about 250 lines of Python; the core is about 680 now, with 25 check modules beside it. It runs on a different host from the fleet it watches, under plain system cron every five minutes. It deliberately does not run under the agent framework's own scheduler, because a watchdog that shares a runtime with what it watches dies silently alongside it. That is precisely how the first outage stayed invisible for four days.",
+          "At first release it covered 23 signals: 5 HTTP endpoint checks, 6 SSH liveness checks, 11 DNS and keepalived checks, and the last-run status of every agent cron job. Modules added since (Kubernetes, PKI, CI, storage, the observability stack, the public edge, the job pipeline, host capacity) bring it to 190 signals as of 19 November 2026. Alerts go to a chat webhook. It connects using its own dedicated SSH key rather than mine, so revoking the watchdog's access touches nothing else.",
           "Every alert carries a stable ID of the form WD-XXXX, derived deterministically by hashing the check key, so the same problem gets the same ID across runs, restarts and weeks. That is a small detail that pays off in conversation: I can say fix WD-08A0 a month later and it still points at exactly one check.",
           "It caught a real cron drift failure on its first run.",
         ],
@@ -416,7 +530,7 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/tree/main/backup",
     title: "Restore-Tested Backups",
     tagline:
-      "Nightly restic backups to a host on different physical hardware, proven by an actual restore: 9,849 messages read back out of the restored database.",
+      "Nightly restic backups to a second host and an offsite copy in Cloudflare R2, proven by actual restores: 9,849 messages read back out of the first restored database.",
     category: "Infrastructure / Data",
     status: "live",
     accent: "violet",
@@ -431,13 +545,13 @@ export const projects: Project[] = [
       teamSize:
         "1",
       outcome:
-        "Took five databases from zero copies to nightly restic snapshots on separate hardware, and proved a restore by counting rows out of it.",
+        "Took five databases from zero copies to nightly restic snapshots on a second host plus an offsite copy, and proved restores by counting rows out of them.",
       problem:
         "One database had a backup. Conversation state, working directories and the task queue had none, and the host they lived on was a single physical machine.",
       approach:
         "restic to a host on a different hypervisor, consistent SQLite snapshots through the .backup API, fresh Postgres dumps per run, a retention policy, and a scripted restore that asserts on row counts rather than file presence.",
       result:
-        "Restore returned 9,849 messages across 316 sessions with integrity ok. The verifier later caught a 0-byte token in a Kubernetes backup that had reported success. No offsite copy yet, stated on the page.",
+        "Restore returned 9,849 messages across 316 sessions with integrity ok. The verifier later caught a 0-byte token in a Kubernetes backup that had reported success. The offsite copy was restored from the cloud and checked the same way.",
     },
     tech: [
       { name: "restic", category: "Backup engine" },
@@ -464,9 +578,10 @@ export const projects: Project[] = [
         subtext: "stale watchdog state before the other host alerts",
       },
       {
-        label: "Offsite copies",
-        value: "0",
-        subtext: "everything is in one building",
+        label: "Offsite copy",
+        value: "R2",
+        subtext: "nightly restic copy since 20 Oct 2026, restored from the cloud and row-checked",
+        source: "offsite_backup.sh log and r2_restore_test.sh, 20 Oct 2026",
       },
     ],
     sections: [
@@ -488,10 +603,10 @@ export const projects: Project[] = [
         ],
       },
       {
-        heading: "Why the copy sits on different physical hardware",
+        heading: "Why the copy has to live somewhere else",
         body: [
-          "The main agent host, the database host, the task queue, and all four worker VMs run on a single physical host. That is acceptable for a lab, but it means one machine failing takes the entire critical path with it.",
-          "So the backup target was placed on a different physical hypervisor. A backup that dies alongside the thing it was backing up is not a backup, and a second VM on the same box would have looked like redundancy on the diagram while providing none of it.",
+          "The main agent host, the database host and the task queue run on one physical host. That is acceptable for a lab, but it means one machine failing takes the entire critical path with it.",
+          "So the backup target was first placed on a different physical hypervisor, because a backup that dies alongside the thing it was backing up is not a backup. That stopped being true in November: when I consolidated the cluster onto four hosts to save power, the backup VM landed on the same host as the machines it protects. The offsite copy in R2 is now what survives that host failing, and moving the backup VM back to separate hardware is the open fix.",
         ],
       },
       {
@@ -506,7 +621,7 @@ export const projects: Project[] = [
       {
         heading: "What this does not cover",
         body: [
-          "There is no offsite copy. Both hosts are in the same building, so a fire takes the originals and every snapshot with them. The fix is not complicated, a cloud repository holding the small but critical subset, and I have not done it. Until I do, this protects against a disk or a host failing, not against the building.",
+          "Since 20 October a nightly job copies every restic snapshot to Cloudflare R2 and checks that each local snapshot has a copy there; a restore from R2 read the databases back with integrity checks passing. On 19 November that copy failed with access denied, and the watchdog raised it the same morning. Until it is fixed the newest offsite snapshot is a day old, which is exactly the kind of gap the signal exists to show.",
           "The destination has 26 GB of capacity, and that ceiling, rather than any policy I wrote, is the real constraint on what gets retained.",
           "The observability stack's own databases are not backed up. That is a deliberate call, since traces are replaceable. Its configuration is not replaceable, and that is covered.",
           "The repository password lives in a mode-600 file. A restic repository is encrypted, so losing that password means losing the backups outright with no recovery path. That is a real single point of failure, and it is the same property that makes the repository safe to leave sitting on another machine.",
@@ -790,7 +905,7 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/tree/main/vsphere",
     title: "Homelab Infrastructure",
     tagline:
-      "A 7-host vSphere cluster that runs everything else on this page, managed through the vCenter API rather than the web UI.",
+      "A seven-host vSphere cluster (four powered on) that runs everything else on this page, managed through the vCenter API rather than the web UI.",
     category: "Infrastructure",
     status: "live",
     accent: "pink",
@@ -805,7 +920,7 @@ export const projects: Project[] = [
       teamSize:
         "1",
       outcome:
-        "A seven-host vSphere cluster (132 cores, 607 GB RAM, 40 VMs powered on) that runs everything else on this site, operated through the API with a scoped service account.",
+        "A seven-host vSphere cluster (132 cores, 607 GB RAM; four hosts and 50 VMs powered on) that runs everything else on this site, operated through the API with a scoped service account.",
       problem:
         "Every project on this site needs somewhere to run, and I wanted to be the person who gets paged when it breaks.",
       approach:
@@ -821,16 +936,16 @@ export const projects: Project[] = [
       { name: "Linux", category: "Guests" },
     ],
     metrics: [
-      { label: "ESXi hosts", value: "7", subtext: "cluster Compute-01", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
-      { label: "CPU cores", value: "132", subtext: "aggregate physical", source: "vCenter host inventory, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
-      { label: "Memory", value: "607 GB", subtext: "273 GB in use (45%)", source: "vCenter quickStats, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
-      { label: "VMs", value: "40", subtext: "powered on of 55 defined", source: "vCenter API, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "ESXi hosts", value: "7", subtext: "4 powered on; 3 powered down since 3 Nov 2026", source: "vCenter host inventory, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "CPU cores", value: "132", subtext: "aggregate physical; 76 on the running hosts", source: "vCenter host inventory, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "Memory", value: "607 GB", subtext: "314 GB in use, 70% of the 448 GB on the running hosts", source: "vCenter quickStats, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/infra_metrics.py" },
+      { label: "VMs", value: "50", subtext: "powered on of 73 defined", source: "vCenter API, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
     ],
     sections: [
       {
         heading: "What it is",
         body: [
-          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 607 GB of RAM, of which 273 GB is actually in use. It currently runs 40 powered-on VMs out of 55 defined. These figures were read from the vCenter API on 7 October 2026, not estimated, and the script that reads them is in the linked repository.",
+          "A seven-host ESXi cluster under vCenter 8, totalling 132 physical cores and 607 GB of RAM. Since 3 November only four hosts are powered on: I moved 15 running VMs onto them live with vMotion, losing at most 2 pings per move, and powered the other three down to save power. The four running hosts have 76 cores and 448 GB of RAM, 314 GB of it in use, and run 50 of the 73 defined VMs. These figures were read from the vCenter API on 19 November 2026, not estimated, and the script that reads them is in the linked repository.",
           "It is the substrate for the Talos platform, the data pipeline, and the build and automation hosts behind my other projects.",
         ],
       },
@@ -850,8 +965,8 @@ export const projects: Project[] = [
       {
         heading: "What the hardware can and cannot do",
         body: [
-          "Capacity planning on used enterprise hardware needs measurement, not spec sheets. Guests here report no AVX2, which looks like an EVC baseline masking it. It is not. The hosts are Sandy Bridge and Ivy Bridge, and AVX2 arrived with Haswell, so the instruction set is physically absent and no cluster setting can expose it.",
-          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, so local model inference on this fleet is not viable at any RAM size. The cluster is idle at around 8 percent CPU with 45 percent of memory in use, but idle capacity is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
+          "Capacity planning on used enterprise hardware needs measurement, not spec sheets. The cluster mixes three CPU generations (Sandy Bridge, Ivy Bridge and Haswell), and only guests on the Haswell hosts see AVX2. That is not an EVC baseline masking it: the older chips physically lack the instruction, so no cluster setting can expose it there. The same split decides where a VM can live-migrate. During the November consolidation, guests started on Haswell hosts could only move live to the other Haswell hosts.",
+          "That distinction decides real questions. Measured memory bandwidth in a guest is about 6.7 GB/s, roughly 140 times slower than a discrete GPU, which rules out serving large language models here; the one model host runs a 4B model on CPU. The four running hosts sit at about 11 percent CPU and 70 percent of memory (19 November 2026): memory-bound, not CPU-bound, which is why consolidating onto fewer hosts worked. Spare CPU is only useful for work the silicon can actually do: I/O bound, parallel, latency tolerant.",
           "The scripts that produced those measurements are in the linked repository, so the claim is checkable rather than asserted.",
         ],
       },
@@ -861,7 +976,7 @@ export const projects: Project[] = [
           "This diagram is generated, not drawn. A script queries vCenter for hosts and virtual machines, the three Kubernetes clusters for node and pod counts, the metrics database for scrape target counts, and the watchdog for its signal inventory, then renders the result. Every number in it was read at render time.",
           "That matters because hand-drawn architecture diagrams rot within weeks. This one is re-runnable: if a cluster gains a node or a monitoring target disappears, regenerating the file shows it. Internal addresses are replaced with role names, which is the only edit made for publication.",
         ],
-        image: "/infrastructure-map.ae158eda.svg",
+        image: "/infrastructure-map.d219b2b7.svg",
         imageAlt:
           "Infrastructure map: seven ESXi hosts under vCenter, three Kubernetes clusters with virtual IPs, an observability host, shared NFS storage, and a Cloudflare tunnel to the public edge.",
         imageCaption:
@@ -895,7 +1010,7 @@ export const projects: Project[] = [
       approach:
         "Nodes created with govc and cloud-init through guestinfo, kube-vip for the API, Cilium, ingress on pinned NodePorts, restore-tested etcd and token backups, and a failover test that was redone after the first one proved nothing.",
       result:
-        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, etcd fsync p99 inside budget and trended. One constraint stated plainly: the three share one VLAN.",
+        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, and etcd fsync latency trended rather than spot checked, which is how a doubling in October was caught and traced to the shared datastore. One constraint stated plainly: the three share one VLAN.",
     },
     featured: true,
     tech: [
@@ -907,9 +1022,9 @@ export const projects: Project[] = [
       { name: "govc / cloud-init", category: "Provisioning" },
     ],
     metrics: [
-      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
-      { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
-      { label: "etcd fsync p99", value: "12.8 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
+      { label: "etcd fsync p99", value: "24.7 ms", subtext: "prod, last hour; 20 to 27 ms since 24 Oct, at the 25 ms budget. Median 1.7 ms", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 20 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer; the probe skipped cert verification, see the 8 Oct post", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/monitor-that-never-used-the-vip" },
     ],
     sections: [
@@ -919,7 +1034,7 @@ export const projects: Project[] = [
           "Three RKE2 clusters on the vSphere lab: development (6 nodes), staging (3), and production (6 nodes with a 3-member etcd quorum). Each has a kube-vip control-plane VIP and its own ingress controller. Nodes are provisioned from the vCenter API with cloud-init through guestinfo. No DHCP, no manual installs.",
           "Production runs behind a Cloudflare tunnel, so there are no inbound ports on the network at all.",
         ],
-        image: "/diagram-k8s-environments.d945309a.svg",
+        image: "/diagram-k8s-environments.86dce7d5.svg",
         imageAlt:
           "Three Kubernetes clusters: dev with six nodes, staging with three and a single etcd member, production with six and three etcd members. Each has a kube-vip virtual IP in front of its API. All three share one VLAN.",
         imageCaption:
@@ -957,7 +1072,7 @@ export const projects: Project[] = [
     github: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py",
     title: "Fleet Observability",
     tagline:
-      "77 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
+      "79 scrape targets feeding a metrics stack that is deliberately not allowed to page me, because alerting stays in one place.",
     category: "Infrastructure",
     status: "live",
     accent: "cyan",
@@ -972,13 +1087,13 @@ export const projects: Project[] = [
       teamSize:
         "1",
       outcome:
-        "A VictoriaMetrics, vmagent and Grafana stack over 77 targets that is deliberately not an alerting path, with every dashboard panel verified to return data.",
+        "A VictoriaMetrics, vmagent and Grafana stack over 79 targets that is deliberately not an alerting path, with every dashboard panel verified to return data.",
       problem:
         "The watchdog says what is broken. Nothing said why, and the one number that mattered most (etcd disk latency) had only been spot checked.",
       approach:
         "A collector outside the clusters it watches, a least-privilege scraping ServiceAccount per cluster, etcd metrics exposed with a rolling control-plane restart, a persistent remote-write queue proven by stopping the database, and no Alertmanager.",
       result:
-        "77 of 77 targets up, 23.6M rows an hour, 30 panels verified by executing their queries, and a label-join bug found by that verification. Zero samples lost across a 100 s backend outage.",
+        "79 targets (76 up; the 3 down belong to a powered-off lab), 26.9M rows an hour, 30 panels verified by executing their queries, and a label-join bug found by that verification. Zero samples lost across a 100 s backend outage.",
     },
     tech: [
       { name: "VictoriaMetrics", category: "TSDB" },
@@ -989,10 +1104,10 @@ export const projects: Project[] = [
       { name: "vmware_exporter", category: "Hypervisor metrics" },
     ],
     metrics: [
-      { label: "Scrape targets", value: "77", subtext: "77 up, read 7 Oct 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
-      { label: "Ingest rate", value: "23.6M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
-      { label: "Dashboard panels", value: "30", subtext: "across 4 dashboards, each verified to return real series", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
-      { label: "Alert signals", value: "115", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 8 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
+      { label: "Scrape targets", value: "79", subtext: "76 up; the 3 down are a powered-off lab, read 19 Nov 2026", source: "vmagent /api/v1/targets on the collector host", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_obs.py" },
+      { label: "Ingest rate", value: "26.9M/hr", subtext: "rows into VictoriaMetrics", source: "sum(increase(vm_rows_inserted_total[1h])), read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "Dashboard panels", value: "30", subtext: "across the first 4 dashboards, each verified to return real series (8 dashboards now)", source: "panels counted in the provisioned dashboard JSON, 7 Oct 2026; verified by executing every query through the Grafana datasource proxy" },
+      { label: "Alert signals", value: "190", subtext: "in the watchdog, not in Grafana", source: "the watchdog's signal registry on its own host, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring" },
     ],
     sections: [
       {
@@ -1014,6 +1129,8 @@ export const projects: Project[] = [
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
           "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 12.5 ms on dev and 12.8 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "Trending it paid off. At 04:22 UTC on 24 October the p99 roughly doubled on all three clusters at once, within the same 30 second scrape on all seven etcd members, and it has sat between 20 and 27 ms since (24.7 ms on production over the last hour, read 20 November). Only the tail moved: the median got slightly faster, 1.8 to 1.7 ms, while the share of fsyncs slower than 16 ms went from about 0.3 percent to about 1.8 percent.",
+          "Counting slow fsyncs per scrape showed the shape. They arrive in bursts about every three minutes, each hitting five to seven of the seven members at once. In those same seconds write latency on the NFS datastore rises on every ESXi host, while the local disks on the same hosts stay flat. Nothing else moved: guest write volume, VM count, network throughput and the NAS's own throughput and CPU are all level across the step, and nothing in the change log lines up with it. The one gap is the switch between the hosts and the NAS, which I do not monitor, so it is not ruled out. My leading explanation is a change inside the NAS's sync-write path, most likely the consumer SSD it uses as a ZFS log device, which runs with trim turned off. I have not proven that yet, because the NAS does not expose per-disk latency without shell access. The fix does not depend on the answer: the plan is to move etcd to host-local disks, one member at a time.",
           "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },
@@ -1030,7 +1147,7 @@ export const projects: Project[] = [
           "An unmonitored monitoring system is the exact failure shape I built this to catch, so the collector has its own signals, including one that checks rows are actually being written, not merely that targets look healthy. A scraper can report every target up and still store nothing if its write path is broken.",
           "The remote-write buffer is on disk rather than in the container, and I proved it by stopping the database for one hundred seconds while scraping continued. The queue grew from 57 bytes to 7.7 MB and flushed on recovery with no gap in the series: every node had exactly twelve samples across the outage window, which is what a thirty-second scrape interval should produce.",
         ],
-        image: "/diagram-observability.a64d432c.svg",
+        image: "/diagram-observability.6cc9cffe.svg",
         imageAlt:
           "Scrape targets feed vmagent, which writes to VictoriaMetrics and is read by Grafana. The watchdog runs entirely separately and is the only path to an alert. No line connects the two systems.",
         imageCaption:
@@ -1075,8 +1192,8 @@ export const projects: Project[] = [
     ],
     metrics: [
       { label: "Inbound ports", value: "0", subtext: "no port forwarding anywhere", source: "design fact: the connector dials out; nothing listens publicly", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
-      { label: "Tunnel connections", value: "4", subtext: "healthy, read 7 Oct 2026", source: "Cloudflare tunnel API, via the edge watchdog signal", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
-      { label: "Probe coverage", value: "22", subtext: "ICMP 9, HTTP 6, TCP 4, DNS 3", source: "blackbox_exporter targets in vmagent, read 7 Oct 2026" },
+      { label: "Tunnel connections", value: "4", subtext: "healthy, read 19 Nov 2026", source: "Cloudflare tunnel API, via the edge watchdog signal", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_edge.py" },
+      { label: "Probe coverage", value: "22", subtext: "ICMP 9, HTTP 6, TCP 4, DNS 3", source: "blackbox_exporter targets in vmagent, read 19 Nov 2026" },
     ],
     sections: [
       {
@@ -1111,7 +1228,7 @@ export const projects: Project[] = [
     slug: "sre-agent",
     title: "Alert-to-Runbook Responder",
     tagline:
-      "A scheduled responder that turns a watchdog alert into a diagnosis and an allowlisted runbook, with the only auto-applied fix chosen because its failure mode was 970 silent skips.",
+      "A scheduled responder that turns a watchdog alert into a diagnosis and an allowlisted runbook. The first fix it was allowed to apply on its own was chosen because its failure mode was 970 silent skips.",
     category: "Infrastructure / Reliability",
     status: "live",
     accent: "amber",
@@ -1123,13 +1240,13 @@ export const projects: Project[] = [
       timeframeSource: "first recorded tick 19 Sep 2026 (sre_runs table)",
       teamSize: "1",
       outcome:
-        "2,658 recorded ticks and 189 incidents in 18 days, every one with a diagnosis attached, and a structural guarantee that the responder can only run commands from a short allowlist.",
+        "8,907 recorded ticks and 621 incidents in two months, every one with a diagnosis attached, and a structural guarantee that the responder can only run commands from a short allowlist.",
       problem:
         "The watchdog raised alerts; the steps after that were a person hand-running commands, and when that person was a chat session the knowledge died with it.",
       approach:
         "A cron tick reads the watchdog's state, opens one incident per alert (enforced by a partial unique index), runs a read-only triage, and names a runbook from a registry. The registry validates arguments and builds argv; the responder never constructs a command. Rate limits live in SQL.",
       result:
-        "One fix is auto-applied (re-pinning a drifted scheduler job: idempotent, reversible, and the failure it fixes is silent and indefinite). Everything else parks for approval or reports only. 15 of 15 guardrail tests pass, each negative case paired with a positive twin.",
+        "Two fixes are auto-applied: re-pinning a drifted scheduler job, and since 18 October restarting one allowlisted container. Everything else reports a diagnosis and stops. 19 of 19 guardrail tests pass, each negative case paired with a positive twin.",
     },
     tech: [
       { name: "Python", category: "Language" },
@@ -1140,27 +1257,27 @@ export const projects: Project[] = [
     metrics: [
       {
         label: "Ticks recorded",
-        value: "2,658",
+        value: "8,907",
         subtext: "every tick, including failures, since 19 Sep 2026",
-        source: "SELECT count(*) FROM sre_runs, read 7 Oct 2026",
+        source: "SELECT count(*) FROM sre_runs, read 19 Nov 2026",
       },
       {
         label: "Incidents",
-        value: "189",
-        subtext: "179 closed; one open incident per alert, enforced by the schema",
-        source: "SELECT count(*) FROM sre_incidents, read 7 Oct 2026",
+        value: "621",
+        subtext: "613 closed; one open incident per alert, enforced by the schema",
+        source: "SELECT count(*) FROM sre_incidents, read 19 Nov 2026",
       },
       {
         label: "Auto-applied fixes",
-        value: "2",
-        subtext: "the other 187 incidents reported a diagnosis and stopped",
-        source: "SELECT runbook, count(*) FROM sre_incidents GROUP BY 1, read 7 Oct 2026",
+        value: "9",
+        subtext: "3 scheduler re-pins and 6 container restarts; the other 612 incidents reported a diagnosis and stopped",
+        source: "SELECT runbook, auto_applied, count(*) FROM sre_incidents GROUP BY 1, 2, read 19 Nov 2026",
       },
       {
         label: "Guardrail tests",
-        value: "15/15",
+        value: "19/19",
         subtext: "refusals for shell metacharacters, non-allowlisted hosts, unknown runbooks",
-        source: "python3 test_guardrails.py, run 7 Oct 2026",
+        source: "python3 test_guardrails.py, run 19 Nov 2026",
       },
     ],
     sections: [
@@ -1173,9 +1290,9 @@ export const projects: Project[] = [
         ],
       },
       {
-        heading: "Why exactly one fix is automatic",
+        heading: "Why only two fixes are automatic",
         body: [
-          "A scheduler job in this fleet once failed 970 consecutive times over four days because its model configuration drifted and the job settled into a skipped state. The fix is re-pinning the job, which is idempotent (re-pinning a pinned job is a no-op) and reversible in one command. The cost of applying it wrongly is far below the cost of not applying it, so that one runbook is auto. Restarting a container is gated behind approval until the auto path has a track record.",
+          "A scheduler job in this fleet once failed 970 consecutive times over four days because its model configuration drifted and the job settled into a skipped state. The fix is re-pinning the job, which is idempotent (re-pinning a pinned job is a no-op) and reversible in one command. The cost of applying it wrongly is far below the cost of not applying it, so that runbook was the first to go automatic. Restarting one allowlisted container followed on 18 October, when I started working weekend shifts and wanted the fleet to recover without me: the restart is idempotent, the service is already down when it runs, and it is limited to 4 a day with a 30 minute cooldown, enforced in SQL.",
           "Against the live drift alert, the dry run proposed the exact command and did nothing. The live run applied it and recorded auto_applied. Then verification failed to parse, and the responder refused to close the incident and marked it failed. That refusal was the point: an exit code of zero never closes an incident on its own. The following run hit the cooldown and declined to re-apply.",
         ],
       },
@@ -1189,7 +1306,7 @@ export const projects: Project[] = [
       {
         heading: "Honest status",
         body: [
-          "This responds to a personal fleet, and 187 of 189 incidents ended in report-only, which is the right outcome for alerts with no safe automated fix. I would not read the fix count as the result. The result is that every tick and every decision sits in a table I can query, so I can answer what it did and why.",
+          "This responds to a personal fleet, and 612 of 621 incidents ended without an automatic action, which is the right outcome for alerts with no safe automated fix. The verifier earns its place: of the six automatic container restarts, the watchdog re-run straight after still read the service as down five times, so the restart was recorded as not having fixed it rather than closing the incident on an exit code. I would not read the fix count as the result. The result is that every tick and every decision sits in a table I can query, so I can answer what it did and why.",
           "Still open: forced-command SSH keys so the server rejects anything off-list rather than only the Python layer, and an alert when the approval queue fills, because a full queue looks identical to an idle one.",
         ],
       },
@@ -1353,7 +1470,7 @@ export const projects: Project[] = [
         label: "Parallel CI jobs",
         value: "6",
         subtext: "3 runner pods, capacity 2 each, spread across workers",
-        source: "runner Deployment manifest; 3/3 pods Ready via the watchdog, read 7 Oct 2026",
+        source: "runner Deployment manifest; 3/3 pods Ready via the watchdog, read 19 Nov 2026",
       },
       {
         label: "Red/green cycle",
@@ -1408,7 +1525,7 @@ export const projects: Project[] = [
     slug: "internal-pki",
     title: "Internal CA with Automated Renewal",
     tagline:
-      "A step-ca certificate authority issuing 24-hour leaf certificates to four services, where the renewal path, not the CA, is the part that was built and tested.",
+      "A step-ca certificate authority issuing 24-hour leaf certificates to seven internal services, where the renewal path, not the CA, is the part that was built and tested.",
     category: "Infrastructure / Security",
     status: "live",
     accent: "violet",
@@ -1419,7 +1536,7 @@ export const projects: Project[] = [
       timeframeSource: "CA built 19 Sep 2026, renewal bugs fixed 21 Sep 2026",
       teamSize: "1",
       outcome:
-        "Four internal services serve TLS from a private CA with password-free renewal every 15 minutes, monitored by eight watchdog signals including hours-to-expiry per certificate.",
+        "Seven internal services serve TLS from a private CA with 24-hour certificates, renewed without a password (four by a systemd timer every 15 minutes, three over ACME), monitored by 17 watchdog signals including hours-to-expiry per certificate.",
       problem:
         "Internal services on a .dev domain cannot be reached over plain HTTP at all (the whole TLD is HSTS-preloaded) and a public CA cannot validate names that only resolve internally.",
       approach:
@@ -1442,9 +1559,9 @@ export const projects: Project[] = [
       },
       {
         label: "Services on the CA",
-        value: "4",
-        subtext: "all validate against the root without -k",
-        source: "curl against each endpoint with the root installed, 21 Sep 2026",
+        value: "7",
+        subtext: "4 renew by systemd timer, 3 over ACME; each has an hours-to-expiry signal",
+        source: "watchdog TLS leaf signals, read 19 Nov 2026 (the first 4 checked with curl against the root, 21 Sep 2026)",
       },
       {
         label: "Closest call",
@@ -1484,6 +1601,7 @@ export const projects: Project[] = [
         heading: "Honest status",
         body: [
           "The root key is on the same box as the issuing CA, which proper practice keeps offline. There is no CRL or OCSP; revocation relies on 24-hour lifetimes expiring. The CA state directory is in the nightly backup, because losing the root key means re-trusting the CA on every client by hand.",
+          "Short lifetimes cut both ways. In November a host was powered off for a day and a half, its renewal timers could not run, and three certificates expired with it. step-ca will not renew a certificate that has already expired, so they had to be re-issued. My checks after that maintenance tested that ports answered, not that certificates were valid, so they missed it; a failed git push against the forge found it.",
         ],
       },
     ],
@@ -1492,7 +1610,7 @@ export const projects: Project[] = [
     slug: "task-queue",
     title: "Durable Postgres Task Queue",
     tagline:
-      "A PostgreSQL queue that runs my long-running agent work, including a job-application pipeline that has submitted 39 applications with a human approving every one: SKIP LOCKED claims, leases with heartbeats, a reaper, approval gates and capped concurrency. Source is public.",
+      "A PostgreSQL queue that runs my long-running agent work, including a job-application pipeline that has submitted 87 applications behind an approval gate: SKIP LOCKED claims, leases with heartbeats, a reaper, approval gates and capped concurrency. Source is public.",
     category: "Backend Services",
     status: "live",
     accent: "blue",
@@ -1504,13 +1622,13 @@ export const projects: Project[] = [
       timeframeSource: "earliest task row 12 Sep 2026; migrations dated 14 and 15 Sep 2026",
       teamSize: "1",
       outcome:
-        "120 tasks across six workload types (job applications, VM operations, iOS and Roblox builds, code changes, briefings) have moved through claim, heartbeat, approval and completion. 152 human-approval gates, 0 submissions without a human decision, and a reaper bug found in production, fixed, and tested in both directions. The queue, the approval gate and the tests are published at github.com/BetV3/orch-queue.",
+        "258 tasks across seven workload types (job applications, VM operations, iOS and Roblox builds, code changes, cloud operations, briefings) have moved through claim, heartbeat, approval and completion. 302 approval parks, 84 of 87 submitted applications approved by me one at a time (the other 3 are explained on this page), and a reaper bug found in production, fixed, and tested in both directions. The queue, the approval gate and the tests are published at github.com/BetV3/orch-queue.",
       problem:
         "My automated workloads run for minutes to hours, die mid-task when a model call fails or a browser tab closes, and sometimes need a human decision before continuing: submit this job application, approve this VM change. A cron job per workload cannot express any of that.",
       approach:
         "One tasks table in PostgreSQL. Workers claim with SELECT ... FOR UPDATE SKIP LOCKED, hold a lease they extend by heartbeat, and can park a task as needs_approval with a question attached. An hourly reaper requeues tasks whose lease lapsed. Per-capability caps on running and parked tasks are enforced at claim time.",
       result:
-        "Concurrent workers never double-claim. The job-application workload alone has run 77 tasks through drafting, form filling and a mandatory confirm-before-submit gate, resulting in 39 submitted applications and 0 submitted without a human decision. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
+        "Concurrent workers never double-claim. The job-application workload alone has run 204 tasks through drafting, form filling and a confirm-before-submit gate, resulting in 87 submitted applications, 84 of them approved by me one at a time. A task that lost its lease before its first heartbeat was invisible to the reaper for two days because NULL < now() is NULL; the fix matches a NULL lease on a stale row, with a test that a stale orphan is reaped and a fresh one is not.",
     },
     tech: [
       { name: "PostgreSQL", category: "Queue and state" },
@@ -1520,9 +1638,9 @@ export const projects: Project[] = [
     metrics: [
       {
         label: "Tasks processed",
-        value: "120",
-        subtext: "84 done across 6 workload types since 12 Sep 2026; 77 are job applications",
-        source: "SELECT capability, status, count(*) FROM tasks GROUP BY 1, 2, read 11 Oct 2026",
+        value: "258",
+        subtext: "169 done across 7 workload types since 12 Sep 2026; 204 are job applications",
+        source: "SELECT capability, status, count(*) FROM tasks GROUP BY 1, 2, read 19 Nov 2026",
       },
       {
         label: "Reaper bug",
@@ -1539,9 +1657,9 @@ export const projects: Project[] = [
       },
       {
         label: "Approval gates",
-        value: "152",
-        subtext: "times a worker parked and waited for a human; 0 of 39 job applications submitted without one",
-        source: "SELECT count(*) FROM task_log WHERE event = 'needs_approval'; tasks.approved_by on every submitted application, read 11 Oct 2026",
+        value: "302",
+        subtext: "times a worker parked and waited for a decision; 84 of 87 submitted applications approved by me, the other 3 explained below",
+        source: "SELECT count(*) FROM task_log WHERE event = 'needs_approval'; tasks.approved_by on every submitted application, read 19 Nov 2026",
         evidence: "https://github.com/BetV3/orch-queue/blob/main/orch_queue/gate.py#L89",
       },
       {
@@ -1578,16 +1696,16 @@ export const projects: Project[] = [
       {
         heading: "What runs on it",
         body: [
-          "Six workload types share the one table. The largest is a job-application pipeline: a nightly task scrapes postings from two boards, filters and ranks them, and enqueues the top 15. A worker tick every 5 minutes claims one, drafts a CV and cover letter tailored to the posting (compiled from LaTeX, 2 pages, checked), fills the application form in a headless browser, and parks the task with a screenshot for a human to approve. Only after that approval does the next tick click submit. 77 tasks have gone through it, 39 were submitted, 11 were skipped on hard requirements or closed postings, and 18 expired unanswered.",
-          "The others are smaller: VM lifecycle operations on the homelab (37 tasks, every one approved before it touched vCenter), iOS and Roblox build agents, code changes, and a daily briefing. Each has its own caps and its own approval rules, but the claim, lease, heartbeat and reaper code is shared.",
+          "Seven workload types share the one table. The largest is a job-application pipeline: a nightly task scrapes postings from two boards, filters and ranks them, and enqueues the top 15. A worker tick every 5 minutes claims one, drafts a CV and cover letter tailored to the posting (compiled from LaTeX, one page, checked), fills the application form in a headless browser, and parks the task with a screenshot for a human to approve. Only after that approval does the next tick click submit. 204 tasks have gone through it: 87 were submitted, 39 were skipped on hard requirements or closed postings, and 63 expired unanswered.",
+          "The others are smaller: VM lifecycle operations on the homelab (46 tasks, every one approved before it touched vCenter), iOS and Roblox build agents, code changes, cloud operations, and a daily briefing. Each has its own caps and its own approval rules, but the claim, lease, heartbeat and reaper code is shared.",
         ],
       },
       {
         heading: "Approval gates and caps",
         body: [
-          "A worker can park a task as needs_approval with a structured request attached: the filled application form and a screenshot, or the exact VM change about to be made. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire after 48 hours if nobody answers, and a count of expired tasks (18 so far) is itself a signal worth reading.",
+          "A worker can park a task as needs_approval with a structured request attached: the filled application form and a screenshot, or the exact VM change about to be made. Resolving it records who approved and when, and the task becomes claimable again with its state preserved. Parked tasks expire after 72 hours if nobody answers (48 until November), and a count of expired tasks (66 so far) is itself a signal worth reading.",
           "For tool servers that own dangerous verbs (VM clone, power, delete), the gate is enforced on the server side: the first call parks and stores a fingerprint of the exact arguments; the re-call runs only if the task is approved and the arguments hash to the same fingerprint. An agent cannot get one change approved and run a different one, and a replayed approval id is refused because the task is already done.",
-          "Caps are enforced at claim time: a per-capability maximum on running tasks (2 for job applications), a maximum on parked tasks (8) that blocks new claims but never blocks resuming an approved one, and a daily ceiling on new work (15). So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
+          "Caps are enforced at claim time: a per-capability maximum on running tasks (2 for job applications), a maximum on tasks parked for approval (8) that blocks new claims but never blocks resuming an approved one, and a daily ceiling on new work (15). So a workload that is waiting on a human cannot keep pulling new work until the backlog of questions is answered.",
         ],
       },
       {
@@ -1599,7 +1717,7 @@ export const projects: Project[] = [
       {
         heading: "Honest status",
         body: [
-          "This serves my own fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. The job-application workload drafts a tailored CV and cover letter per posting and fills the form, but a human reads every one and clicks submit; nothing in the pipeline can submit on its own. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
+          "This serves my own fleet of automated workloads, not a multi-tenant product. The numbers are small on purpose and are read from the database on the date shown. The job-application workload drafts a tailored CV and cover letter per posting and fills the form, then parks before the submit click. Of 87 applications submitted, I approved 84 myself. Two were approved by the agent under a standing rule I gave it for a weekend I was at work, because the parks would have expired during my shift. One went out with no approval at all: a chat-style application form had no submit button, and answering its last question submitted it. The gate parks before a submit control, so a form whose submit control is a chat answer slipped past it. The worker's instructions now park before the last answer on chat forms; that is an instruction rather than a code guarantee, so I count it as an open gap. There is no dead-letter table yet; failed tasks stay failed and are listed, which is adequate at this volume and would not be at a larger one.",
         ],
       },
     ],
