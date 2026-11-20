@@ -157,6 +157,123 @@ export const projects: Project[] = [
     ],
   },
   {
+    slug: "packet-drop",
+    // PUBLISHING NOTE: `github` and the `evidence` links below point at
+    // github.com/BetV3/packet-drop, which is staged but not pushed yet. Merge this
+    // only after that repo is public, or every source link on the page 404s.
+    github: "https://github.com/BetV3/packet-drop",
+    title: "XDP DDoS Filter with a Go Control Plane",
+    tagline:
+      "Cloudflare's 2018 packet-drop benchmark rebuilt on my hardware, then an XDP filter with a Go control plane and a detector that blocks a 13 Mpps flood in a median 133 ms.",
+    category: "Networking / Systems",
+    status: "complete",
+    accent: "orange",
+    order: 1.5,
+    featured: true,
+    recruiter: {
+      role: "Solo: designed, built and measured",
+      timeframe: "Oct 2026",
+      timeframeSource: "first commit 16 Oct 2026; attack tests 21 and 22 Oct 2026",
+      teamSize: "1",
+      outcome:
+        "An XDP filter and Go control plane that stopped 24 of 24 spoofed floods in the attack test, with zero flood packets reaching the service once the rule was live, and no packet in the swap test ever seeing a half-updated rule set.",
+      problem:
+        "Cloudflare's 2018 post measured how fast Linux can drop packets at each layer of the network stack. I wanted to know whether the numbers held on my hardware, and then whether I could build the thing that sits on top of that fast path: something that decides what to drop while an attack is running.",
+      approach:
+        "Two VMs with the 10G cards passed straight through, connected by a direct cable. A kernel packet generator floods one core at about 13 Mpps. Every result is a row in a CSV that records the git commit and the full environment, and every table is generated from those CSVs. Then dropd: an XDP program in C, a Go daemon built on cilium/ebpf, and a detector that samples 1 in 1,000 packets.",
+      result:
+        "XDP dropped at about 150 CPU cycles per packet against roughly 880 for iptables and 3,950 for a userspace program. dropd with a full rule set costs 258 cycles per packet. The attack test found two real bugs. Fixing the first took the flood's cost from 570 to 258 cycles per packet. Fixing the second took the detector from 4 of 8 attacks stopped to 24 of 24.",
+    },
+    tech: [
+      { name: "XDP / eBPF (C)", category: "Packet filter" },
+      { name: "Go + cilium/ebpf", category: "Control plane and detector" },
+      { name: "Linux kernel pktgen", category: "Traffic generator" },
+      { name: "perf", category: "Cycles per packet" },
+      { name: "VMware ESXi PCI passthrough", category: "Lab" },
+      { name: "Python", category: "Harness and reports" },
+      { name: "Prometheus metrics + Grafana", category: "Observability" },
+    ],
+    metrics: [
+      {
+        label: "Time to block a flood",
+        value: "133 ms",
+        subtext: "median, 5 runs on 4 cores: flood onset at the NIC to the auto rule going live",
+        source: "bench/pd24_attack.py, report/pd24.md, 21 Oct 2026",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd24.md",
+      },
+      {
+        label: "Attacks stopped",
+        value: "24/24",
+        subtext: "after the detector fix; the first version stopped 4 of 8",
+        source: "results/pd24_attack*.csv, report/pd24.md",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd24.md",
+      },
+      {
+        label: "XDP vs iptables",
+        value: "152 vs 879",
+        subtext: "CPU cycles to drop one packet: Cloudflare's 2018 XDP program vs iptables raw table",
+        source: "results/pd12.csv and pd21_dropd.csv, retpoline mitigations, GRO off",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/report/pd21.md",
+      },
+      {
+        label: "Mixed rule sets seen",
+        value: "0",
+        subtext: "across ~1,100 rule swaps under traffic; a deliberately broken version shows 477,035",
+        source: "TestAtomicSwap and TestAtomicSwapRedRun, BPF_PROG_TEST_RUN",
+        evidence: "https://github.com/BetV3/packet-drop/blob/main/dropd/internal/engine/engine_test.go",
+      },
+    ],
+    sections: [
+      {
+        heading: "Reproducing the 2018 post",
+        body: [
+          "The post walks down the Linux network stack and drops packets at each layer: a userspace program, a socket filter, iptables, nftables, tc, and finally XDP, which runs inside the network driver before the kernel builds its usual packet structure. I ran the same eight programs on one core of a Haswell Xeon (E5-2650 v3) inside a VMware VM, with the Intel X540 10G card passed straight through to it.",
+          "The ranking came out almost the same as the post's, with XDP far ahead of everything else; only tc and the iptables raw table swapped places. Absolute numbers came out lower, largely because the VM ran with the Spectre mitigation the kernel picked for it, IBRS. Switching the guest to retpoline took iptables from 1.08 to 3.31 million packets per second. That is a lab setting and I would not change it on a real host. With retpoline, XDP drops a packet in about 150 cycles and iptables in about 880, so XDP is roughly six times cheaper.",
+          "I report cycles per packet next to packets per second throughout. A faster CPU has more cycles per second but needs about the same number of cycles to drop a packet, so the cycle figure is the one that transfers to other hardware.",
+        ],
+        image: "/packet-drop-ladder.1053cb4a.png",
+        imageAlt: "Bar chart comparing packets dropped per second on one CPU for eight methods, Cloudflare 2018 against this bench",
+        imageCaption: "The 2018 ladder on one core, before the mitigation and GRO tuning. Generated from results/pd06_ladder.csv.",
+      },
+      {
+        heading: "Making the CPU the bottleneck again",
+        body: [
+          "A benchmark only measures the defender if the attacker is faster. Plain XDP needs about 150 cycles per packet, which is 18 to 20 million packets per second on one core. The 10G wire tops out at 14.88 million, and my generator reached 13.26 million after I gave it more vCPUs and pinned it to the network card's NUMA node. So the plain XDP numbers measure the generator, and the report says so next to each row.",
+          "dropd with real rules costs more than that, which is useful here. With a full rule set one core drops 10.76 million packets per second, below the generator's rate, so for dropd the core is the limit again and the cycle counts are its own.",
+          "I tried DPDK first to get a faster generator, and it crashed the hypervisor host. The X540 has two ports on one chip. One was passed through to the generator VM; the other carried the host's management network. While DPDK drove the passed-through port, the host logged a fatal PCIe error on the management port and went down. The host had to be restarted. I checked that every VM on it came back, wrote it up, and added a guard to the scripts that refuses to run DPDK on that card.",
+        ],
+      },
+      {
+        heading: "dropd: what it does",
+        body: [
+          "The XDP program checks each packet against a rule set in a fixed order. First a fingerprint match on protocol, destination port, TTL and packet length, which is what a flood tool's packets have in common. Then the source address against a blocklist of up to a million prefixes. Then port rules, then a default. A rule can drop, pass, or rate limit.",
+          "The Go daemon owns the rules. It builds a new rule set in a spare copy of the maps and then flips a single index that says which copy is live. A packet reads that index once, so it sees either the whole old set or the whole new one. A test pushes 1.9 million packets through the real program while the rule set flips about 1,100 times and requires zero mixed reads. The same test against a version that edits the live copy in place shows 477,035 mixed reads, which is how I know the test can fail.",
+          "The detector reads 1 in 1,000 packets from a ring buffer, keeps a picture of normal traffic, and when the passing rate jumps it looks for the narrowest fingerprint that covers most of the new traffic and almost none of the old. Its rules expire on their own once the attack stops.",
+          "Per feature on one core: parsing alone is 160 cycles per packet, a port rule 212, a fingerprint 217, and a miss in a 1M-entry blocklist about 500.",
+        ],
+      },
+      {
+        heading: "The attack test, and the two bugs it found",
+        body: [
+          "Sixteen simulated users send 50,000 packets per second to a service on the test machine, each packet numbered so every loss can be counted. Ten seconds in, a 13 Mpps spoofed flood hits the same port. Blocking the port would take the users down with it, so the detector has to find the flood's fingerprint.",
+          "The first run still lost 4.8% of legitimate packets after the rule went live. The main cause was match order: I had put the blocklist first, and a spoofed flood comes from random addresses, so every attack packet paid for a full miss in a million-entry trie before reaching the fingerprint that would drop it. Checking fingerprints first took the flood from 570 to 258 cycles per packet, and the next runs lost under 1%.",
+          "The second bug was in the detector, and it missed 4 of 8 attacks. A flood ramps up over a fraction of a second, and my detector learned every calm-looking 100 ms window as normal straight away. So it learned the start of the flood. In one run that made the flood's fingerprint look like 7.6% of normal traffic, and the detector refused to block it as too broad for the full 20 seconds. On a single core the alarm threshold climbed with the flood and the attack was never declared. Now a calm window waits two seconds before it counts, and is thrown away if an alarm goes off in the meantime. Two regression tests replay both failures. They fail on the old code and pass on the new.",
+        ],
+        image: "/packet-drop-attack-timeline.453bd33e.png",
+        imageAlt: "Three-panel timeline of one attack run: packet rate at the NIC, flood packets reaching the service, and legitimate packet loss",
+        imageCaption: "The median attack run on four cores. Flood packets reach the service until the auto rule goes live 133 ms after onset, and none after. Legit loss averages under 1% for the rest of the flood, with spikes to about 5%.",
+      },
+      {
+        heading: "What is still not solved",
+        body: [
+          "Once the rule is live no flood packet reaches the service, but about 1% of legitimate packets are still lost on four cores. The network card drops them because its receive ring fills before a core gets to it. The cores were a quarter to a third idle, so it is not raw CPU. Keeping them from halting between polls, with a busy loop that only runs when nothing else wants the core, cut the loss to 0.17%. That looks like the time a VM's idle CPU takes to wake back up. A bigger ring made it worse, which I have not explained.",
+          "On a single core, legit loss is 13 to 19%. The core is 100% busy, and measuring it showed why it falls short of the benchmark number: each legitimate packet that is passed to the service costs about 6,700 cycles, against 245 for each flood packet dropped, so the traffic you let through competes with the flood for the same core. The answer there is more receive queues, not a faster filter.",
+          "Other limits: IPv4 only, one host's detector with no fleet-wide view, and everything measured on one older CPU inside a VM. The full reports, including the runs that went wrong, are in the repository.",
+        ],
+      },
+    ],
+  },
+  {
     slug: "fleet-watchdog",
     github: "https://github.com/BetV3/Homelab_Scripts/tree/main/monitoring",
     title: "Fleet Watchdog",
