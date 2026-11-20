@@ -427,7 +427,7 @@ export default function Home() {
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />
-                  Finding why etcd disk latency doubled on all three clusters on 23 October
+                  Moving etcd off the shared NFS datastore after its p99 latency doubled in October
                 </li>
                 <li className="flex items-start gap-3">
                   <span className="mt-1.5 h-1.5 w-1.5 flex-shrink-0 rounded-full bg-accent" />

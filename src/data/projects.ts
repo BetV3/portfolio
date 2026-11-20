@@ -1010,7 +1010,7 @@ export const projects: Project[] = [
       approach:
         "Nodes created with govc and cloud-init through guestinfo, kube-vip for the API, Cilium, ingress on pinned NodePorts, restore-tested etcd and token backups, and a failover test that was redone after the first one proved nothing.",
       result:
-        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, etcd fsync p99 inside budget and trended. One constraint stated plainly: the three share one VLAN.",
+        "15 of 15 nodes Ready, VIP moved in about 3 seconds under a real transfer, and etcd fsync latency trended rather than spot checked, which is how a doubling in October was caught and traced to the shared datastore. One constraint stated plainly: the three share one VLAN.",
     },
     featured: true,
     tech: [
@@ -1024,7 +1024,7 @@ export const projects: Project[] = [
     metrics: [
       { label: "Clusters", value: "3", subtext: "dev 6 nodes, staging 3, prod 6", source: "kubectl get nodes per cluster, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
       { label: "Nodes Ready", value: "15/15", subtext: "across all three", source: "kubectl get nodes per cluster, read 19 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/monitoring/watchdog_k8s_envs.py" },
-      { label: "etcd fsync p99", value: "12.8 ms", subtext: "prod, last hour, against a 25 ms budget", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 7 Oct 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
+      { label: "etcd fsync p99", value: "24.7 ms", subtext: "prod, last hour; 20 to 27 ms since 24 Oct, at the 25 ms budget. Median 1.7 ms", source: "histogram_quantile(0.99, rate(etcd_disk_wal_fsync_duration_seconds_bucket[1h])) in VictoriaMetrics, read 20 Nov 2026", evidence: "https://github.com/BetV3/Homelab_Scripts/blob/main/vsphere/full_inventory.py" },
       { label: "VIP failover", value: "~3 s", subtext: "measured during a forced transfer; the probe skipped cert verification, see the 8 Oct post", source: "timed by deleting the kube-vip pod on the holder, 20 Sep 2026", evidence: "/blog/monitor-that-never-used-the-vip" },
     ],
     sections: [
@@ -1129,6 +1129,8 @@ export const projects: Project[] = [
         body: [
           "The most valuable series is etcd write-ahead-log fsync latency. Every virtual machine in the lab sits on one NFS datastore backed by a four-wide RAID0 array on a 2010-era server, and etcd is the most latency-sensitive thing running on it.",
           "A spot check with fsync() in a loop had suggested about 3.5 ms at the median, which looked comfortable. etcd's own histogram puts the 99th percentile over the last hour at 12.5 ms on dev and 12.8 ms on production (read 7 October 2026), against a 25 ms budget. Still inside the limit, but with much less headroom than the spot check implied, and now trended rather than guessed.",
+          "Trending it paid off. At 04:22 UTC on 24 October the p99 roughly doubled on all three clusters at once, within the same 30 second scrape on all seven etcd members, and it has sat between 20 and 27 ms since (24.7 ms on production over the last hour, read 20 November). Only the tail moved: the median got slightly faster, 1.8 to 1.7 ms, while the share of fsyncs slower than 16 ms went from about 0.3 percent to about 1.8 percent.",
+          "Counting slow fsyncs per scrape showed the shape. They arrive in bursts about every three minutes, each hitting five to seven of the seven members at once. In those same seconds write latency on the NFS datastore rises on every ESXi host, while the local disks on the same hosts stay flat. Nothing else moved: guest write volume, VM count, network and the NAS's own throughput and CPU are all level across the step, and nothing in the change log lines up with it. My leading explanation is a change inside the NAS's sync-write path, most likely the consumer SSD it uses as a ZFS log device, which runs with trim turned off. I have not proven that yet, because the NAS does not expose per-disk latency without shell access. The fix does not depend on the answer: the plan is to move etcd to host-local disks, one member at a time.",
           "Exposing it required a config change and a rolling control-plane restart, because RKE2 binds the etcd metrics port to localhost by default. I rolled one node at a time and waited for the API to report ready between each; production and dev held quorum throughout, and staging, which has a single etcd member, was briefly unavailable, which I planned for rather than discovered.",
         ],
       },

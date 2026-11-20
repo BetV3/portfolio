@@ -225,6 +225,8 @@ jobs:
             'Offsite copies|superseded 2026-11-19: R2 offsite copy exists since 2026-10-20'
             'seven-host vSphere cluster I|superseded 2026-11-19: four of seven hosts powered on'
             '15 of 15 guardrail|superseded 2026-11-19: 19/19 guardrail tests'
+            '"12\.8 ms"|superseded 2026-11-20: etcd fsync p99 24.7 ms (prod, 1h); the dated 7 Oct figure stays in prose as history'
+            'between 8\.0 and 12\.8|superseded 2026-11-20: etcd fsync p99 20 to 27 ms since 2026-10-24'
           )
           # Same grep-exits-2 trap as the placeholder check above: a missing
           # path silently disabled this check from the day it was written.

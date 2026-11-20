@@ -19,7 +19,7 @@ const services = [
       { label: "Provisioning scripts", href: "https://github.com/BetV3/Homelab_Scripts/tree/main/vsphere" },
     ],
     evidence:
-      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync p99 measured between 8.0 and 12.8 ms across the three clusters (7 October 2026) against a 25 ms budget.",
+      "Control-plane failover tested by killing the VIP holder: traffic moved in about 3 seconds. etcd fsync latency is trended per cluster; when its p99 doubled to the 25 ms budget in October, I traced it to stalls in the shared NFS datastore rather than to the clusters.",
   },
   {
     title: "Monitoring that catches real failures",
