@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { SITE_URL, ogImages } from "@/lib/og";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -15,6 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL(SITE_URL),
   title: "Portfolio | Backend & Platform Engineer",
   description:
     "Backend/Platform engineer with strong infrastructure + networking depth, building real systems in a homelab + AWS.",
@@ -28,6 +30,24 @@ export const metadata: Metadata = {
   ],
   icons: {
     icon: "/code-solid-full.svg",
+  },
+  // Link previews (LinkedIn, Slack, iMessage). Pages that set their own
+  // openGraph replace this object, so they must pass ogImages too.
+  openGraph: {
+    type: "website",
+    siteName: "eramirez.dev",
+    url: "/",
+    title: "Elvis Ramirez | Backend & Platform Engineer",
+    description:
+      "Projects, incident write-ups and resume. A self-hosted fleet run like production, with every failure written up to root cause.",
+    images: ogImages,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Elvis Ramirez | Backend & Platform Engineer",
+    description:
+      "Projects, incident write-ups and resume. A self-hosted fleet run like production, with every failure written up to root cause.",
+    images: ["/og.png"],
   },
 };
 

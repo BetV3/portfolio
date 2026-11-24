@@ -15,7 +15,7 @@ export const recruiterFacts = {
   education: "BS Computer Science, UT Dallas, August 2025",
   email: "elvisramirez999@gmail.com",
   github: "https://github.com/BetV3",
-  linkedin: "https://www.linkedin.com/in/elvis-ramirez-7223b417a/",
+  linkedin: "https://www.linkedin.com/in/elvis-ramirez-swe/",
   resumePdf: "/resume.pdf",
 };
 

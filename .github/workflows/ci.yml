@@ -227,6 +227,9 @@ jobs:
             '15 of 15 guardrail|superseded 2026-11-19: 19/19 guardrail tests'
             '"12\.8 ms"|superseded 2026-11-20: etcd fsync p99 24.7 ms (prod, 1h); the dated 7 Oct figure stays in prose as history'
             'between 8\.0 and 12\.8|superseded 2026-11-20: etcd fsync p99 20 to 27 ms since 2026-10-24'
+            'July 2023 to present|Jul 2023 - Present|superseded 2026-11-24: at Walmart since Aug 2020 (Elvis; LinkedIn shows Aug 2020)'
+            'Personal Shopper until Oct 2026|superseded 2026-11-24: Loader, earlier store roles since Aug 2020'
+            'elvis-ramirez-7223b417a|superseded 2026-11-24: LinkedIn URL is /in/elvis-ramirez-swe (old one 301s)'
           )
           # Same grep-exits-2 trap as the placeholder check above: a missing
           # path silently disabled this check from the day it was written.

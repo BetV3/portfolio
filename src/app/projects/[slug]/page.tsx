@@ -7,6 +7,7 @@ import {
   statusLabel,
   type Project,
 } from "@/data/projects";
+import { ogImages } from "@/lib/og";
 
 type Props = { params: Promise<{ slug: string }> };
 
@@ -21,6 +22,21 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${project.title} | Portfolio`,
     description: project.tagline,
+    alternates: { canonical: `/projects/${project.slug}/` },
+    openGraph: {
+      type: "website",
+      siteName: "eramirez.dev",
+      url: `/projects/${project.slug}/`,
+      title: project.title,
+      description: project.tagline,
+      images: ogImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: project.title,
+      description: project.tagline,
+      images: ["/og.png"],
+    },
   };
 }
 
