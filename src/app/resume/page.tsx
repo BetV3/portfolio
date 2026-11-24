@@ -297,11 +297,11 @@ export default function ResumePage() {
             <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-2 mb-4">
               <div>
                 <h3 className="text-lg font-semibold text-foreground">
-                  Loader (Personal Shopper until Oct 2026)
+                  Loader (earlier: Personal Shopper, other store roles)
                 </h3>
                 <p className="text-accent">Walmart Inc</p>
               </div>
-              <p className="text-sm text-muted-foreground">July 2023 to present</p>
+              <p className="text-sm text-muted-foreground">August 2020 to present</p>
             </div>
             <ul className="space-y-2 text-muted-foreground">
               <li className="flex items-start gap-3">

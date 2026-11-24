@@ -8,6 +8,7 @@ import {
   publishedPosts,
 } from "@/data/blog";
 import { blogContent } from "@/data/blog-content";
+import { ogImages } from "@/lib/og";
 
 type Props = {
   params: Promise<{ slug: string }>;
@@ -32,6 +33,23 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `${post.title} | Portfolio`,
     description: post.description,
+    alternates: { canonical: `/blog/${post.slug}/` },
+    openGraph: {
+      type: "article",
+      siteName: "eramirez.dev",
+      url: `/blog/${post.slug}/`,
+      title: post.title,
+      description: post.description,
+      publishedTime: post.date,
+      authors: ["Elvis Ramirez"],
+      images: ogImages,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: post.title,
+      description: post.description,
+      images: ["/og.png"],
+    },
   };
 }
 
